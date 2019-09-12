@@ -27,7 +27,7 @@ cv2.createTrackbar("h_max", "frame", color_range[1][0], 179, partial(update_rang
 cv2.createTrackbar("s_max", "frame", color_range[1][1], 255, partial(update_range, 1, 1))
 cv2.createTrackbar("v_max", "frame", color_range[1][2], 255, partial(update_range, 1, 2))
 
-cap = cv2.VideoCapture(1)
+cap = cv2.VideoCapture(2)
 
 while cap.isOpened():
     _, frame = cap.read()

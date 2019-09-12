@@ -13,7 +13,7 @@ try:
 except KeyError:
     exit("Blue color has not been thresholded, run threshold.py")
 
-cap = cv2.VideoCapture(1)
+cap = cv2.VideoCapture(2)
 
 while cap.isOpened():
     _, frame = cap.read()
