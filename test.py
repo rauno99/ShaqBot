@@ -1,7 +1,18 @@
 import cv2
 import config
 import utils
+import serial
+import time
 
+ser = serial.Serial('COM7')  # open serial port
+ser.baudrate = 115200
+ser.stopbits = 1
+ser.bytesize = 8
+ser.setDTR(1)
+ser.parity = 'N'
+ser.write(str.encode('\r \n'))
+
+firstMillis = int(round(time.time() * 1000))
 
 try:
     ball_color = config.get_color_range("ball")
@@ -17,6 +28,11 @@ cap = cv2.VideoCapture(1)
 
 while cap.isOpened():
     _, frame = cap.read()
+
+    millis = int(round(time.time() * 1000))
+    if millis - firstMillis < 10000:
+        ser.write(str.encode('sd:0:5:-5:0'))  # check which port was really used
+        ser.write(str.encode('\r \n'))
 
     ball_mask = utils.apply_color_mask(frame, ball_color)
     basket_mask = utils.apply_color_mask(frame, basket_color)
