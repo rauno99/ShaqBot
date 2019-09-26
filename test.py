@@ -4,7 +4,7 @@ import utils
 import serial
 import time
 import movement
-
+import numpy as np
 #NB realsesnse is loaded with "realsense-viewer" in terminal
 
 ser = serial.Serial("/dev/ttyACM0")
@@ -18,13 +18,15 @@ ser.write(str.encode("\r \n"))
 firstMillis = int(round(time.time()*1000))
 newMillis = 0
 
+kernel = np.ones((5,5), np.uint8)
+
 try:
     ball_color = config.get_color_range("ball")
 except KeyError:
     exit("Ball color has not been thresholded, run threshold.py")
 
 try:
-    basket_color = config.get_color_range("blue")
+    basket_color = config.get_color_range("pink")
 except KeyError:
     exit("Blue color has not been thresholded, run threshold.py")
 
@@ -57,12 +59,18 @@ while cap.isOpened():
     if biggest_ball is not None:
         (x, y), radius = biggest_ball
         cv2.circle(frame, (x, y), radius, utils.get_color_range_mean(ball_color), 5)
-        #print(x, y)
+        print(x, y)
 
-        movement.omniDirectional(ser, x, y)
+        if y < 350:
+            movement.omniDirectional(ser, x, y)
+        else:
+            if find_basket is not None:
+                (x1, y1), w, h = find_basket
+                cv2.rectangle(frame, (x1, y1), (x1 + w, y1 + h), (0, 255, 0), 2)
+            else:
+                movement.rotateLeft(ser)
 
-
-    cv2.drawContours(frame, find_basket, -1, (255, 0, 0), 3)
+    #opening = cv2.morphologyEx(frame, cv2.MORPH_OPEN, kernel)
     cv2.imshow("frame", frame)
 
     if cv2.waitKey(10) & 0xFF == ord("q"):

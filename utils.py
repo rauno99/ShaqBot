@@ -32,4 +32,7 @@ def find_biggest_circle(src):
 
 def find_basket(src):
     contours_basket, _ = cv2.findContours(src, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
-    return contours_basket
+
+    for contour in contours_basket:
+        (x, y, w, h) = cv2.boundingRect(contour)
+        return (int(x), int(y)), int(w), int(h)

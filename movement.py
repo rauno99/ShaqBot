@@ -15,6 +15,10 @@ def moveForward(ser):
     print("right")
     return
 
+def rotateLeft(ser):
+    ser.write(str.encode("sd:-10:0:0 \r \n"))
+    return
+
 def stop(ser):
     ser.write(str.encode("sd:0:0:0 \r \n"))
     print("stop")
@@ -26,19 +30,15 @@ def omniDirectional(ser, x, y):
     wheelAngle2 = 240
     wheelAngle3 = 120
 
-    yLine = 480 - y
-    xLine = 320 - x
-
-
     #robotDirectionAngle calcualted from x and y coords of ball
     robotDirectionAngle = int(math.degrees(math.atan((320 - x)/y)) + 90)
-    print(robotDirectionAngle)
+    #print(robotDirectionAngle)
 
-    wheelLinearVelocity1 = int(robotSpeed * math.cos(math.radians(robotDirectionAngle - wheelAngle1)))
-    wheelLinearVelocity2 = int(robotSpeed * math.cos(math.radians(robotDirectionAngle - wheelAngle2)))
-    wheelLinearVelocity3 = int(robotSpeed * math.cos(math.radians(robotDirectionAngle - wheelAngle3)))
+    wheelLinearVelocity1 = int(-robotSpeed * math.cos(math.radians(robotDirectionAngle - wheelAngle1)))
+    wheelLinearVelocity2 = int(-robotSpeed * math.cos(math.radians(robotDirectionAngle - wheelAngle2)))
+    wheelLinearVelocity3 = int(-robotSpeed * math.cos(math.radians(robotDirectionAngle - wheelAngle3)))
 
-    print(wheelLinearVelocity1, wheelLinearVelocity2, wheelLinearVelocity3)
+    #print(wheelLinearVelocity1, wheelLinearVelocity2, wheelLinearVelocity3)
 
-    ser.write(str.encode("sd:" + str(wheelLinearVelocity1) + ":" + str(wheelLinearVelocity3) + ":" + str(wheelLinearVelocity2) + " \r \n"))
+    ser.write(str.encode("sd:" + str(wheelLinearVelocity1) + ":" + str(wheelLinearVelocity2) + ":" + str(wheelLinearVelocity3) + " \r \n"))
     return
