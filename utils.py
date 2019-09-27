@@ -35,4 +35,5 @@ def find_basket(src):
 
     for contour in contours_basket:
         (x, y, w, h) = cv2.boundingRect(contour)
-        return (int(x), int(y)), int(w), int(h)
+        if w >= 15:
+            return (int(x), int(y)), int(w), int(h)

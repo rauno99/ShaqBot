@@ -34,6 +34,7 @@ cap = cv2.VideoCapture(2)
 
 while cap.isOpened():
 
+    width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)  # float
 
     millis = int(round(time.time()*1000))
     #if millis -firstMillis < 5000:
@@ -59,7 +60,7 @@ while cap.isOpened():
     if biggest_ball is not None:
         (x, y), radius = biggest_ball
         cv2.circle(frame, (x, y), radius, utils.get_color_range_mean(ball_color), 5)
-        print(x, y)
+        #print(x, y)
 
         if y < 350:
             movement.omniDirectional(ser, x, y)
@@ -67,9 +68,20 @@ while cap.isOpened():
             if find_basket is not None:
                 (x1, y1), w, h = find_basket
                 cv2.rectangle(frame, (x1, y1), (x1 + w, y1 + h), (0, 255, 0), 2)
-            else:
-                movement.rotateLeft(ser)
 
+                #korviga ühele joonele
+                if x1 < 330 and x1 > 290:
+                    print("stop")
+                    movement.stop(ser)
+
+                else:
+                    movement.rotateLeftAndRight(ser, x)
+            else:
+                print("no basket")
+                movement.rotateLeftAndRight(ser, x)
+    else:
+        print("no ball")
+        movement.moveLeft(ser)
     #opening = cv2.morphologyEx(frame, cv2.MORPH_OPEN, kernel)
     cv2.imshow("frame", frame)
 
