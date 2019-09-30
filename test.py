@@ -5,6 +5,7 @@ import serial
 import time
 import movement
 import numpy as np
+import keyboard_control
 #NB realsesnse is loaded with "realsense-viewer" in terminal
 
 ser = serial.Serial("/dev/ttyACM0")
@@ -18,6 +19,8 @@ ser.write(str.encode("\r \n"))
 firstMillis = int(round(time.time()*1000))
 newMillis = 0
 
+throwerStatus = False
+
 kernel = np.ones((5,5), np.uint8)
 
 try:
@@ -26,7 +29,7 @@ except KeyError:
     exit("Ball color has not been thresholded, run threshold.py")
 
 try:
-    basket_color = config.get_color_range("pink")
+    basket_color = config.get_color_range("blue")
 except KeyError:
     exit("Blue color has not been thresholded, run threshold.py")
 
@@ -50,8 +53,8 @@ while cap.isOpened():
     find_basket = utils.find_basket(basket_mask)
 
     lineThickness = 2
-    cv2.line(frame, (335, 0), (335, 480), (0, 255, 0), lineThickness)
-    cv2.line(frame, (305, 0), (305, 480), (0, 255, 0), lineThickness)
+    #cv2.line(frame, (335, 0), (335, 480), (0, 255, 0), lineThickness)
+    #cv2.line(frame, (305, 0), (305, 480), (0, 255, 0), lineThickness)
 
     while ser.inWaiting() > 0:
         ser.readline()
@@ -70,23 +73,71 @@ while cap.isOpened():
                 cv2.rectangle(frame, (x1, y1), (x1 + w, y1 + h), (0, 255, 0), 2)
 
                 #korviga ühele joonele
-                if x1 < 330 and x1 > 290:
-                    print("stop")
+                if x1 < 310 and x1 > 300:
+                    print("Vahemik oige")
+                    #print("stop")
                     movement.stop(ser)
+                    newMillis = int(round(time.time()*1000))
+                    firstMillis = int(round(time.time()*1000))
+                    throwerStatus=False
+                    while newMillis - firstMillis < 1000:
+                        newMillis = int(round(time.time()*1000))
+                        print(str(throwerStatus) + " duringMillis")
+                        if throwerStatus == False:
+                            movement.throwerStop(ser)
+                            movement.thrower(ser, 200)
+                            throwerStatus = True
+                            print(throwerStatus)
+                            movement.moveForward(ser)
+
 
                 else:
-                    movement.rotateLeftAndRight(ser, x)
+                    print(x1)
+                    movement.rotateLeftAndRight(ser, x, x1)
+                    print("vahemik vale")
+
             else:
                 print("no basket")
-                movement.rotateLeftAndRight(ser, x)
+                movement.rotateLeftAndRight(ser, x, x1=None)
     else:
-        print("no ball")
+        #print("no ball")
         movement.moveLeft(ser)
+        if throwerStatus == True:
+            movement.throwerStop(ser)
+            throwerStatus = False
+            print(throwerStatus)
+
     #opening = cv2.morphologyEx(frame, cv2.MORPH_OPEN, kernel)
     cv2.imshow("frame", frame)
 
-    if cv2.waitKey(10) & 0xFF == ord("q"):
+    if cv2.waitKey(1) & 0xFF == ord("q"):
         break
+    if cv2.waitKey(1) & 0xFF == ord("p"):
+        print("Manual override")
+        while True:
+            _, frame = cap.read()
+            cv2.imshow("frame", frame)
+
+            if cv2.waitKey(1) & 0xFF == ord("w"):
+                movement.moveForward(ser)
+            if cv2.waitKey(1) & 0xFF == ord("s"):
+                movement.moveBack(ser)
+            if cv2.waitKey(1) & 0xFF == ord("a"):
+                movement.moveLeft(ser)
+            if cv2.waitKey(1) & 0xFF == ord("d"):
+                movement.moveRight(ser)
+            if cv2.waitKey(1) & 0xFF == ord("v"):
+                movement.directLeftRight(ser, 90)
+            if cv2.waitKey(1) & 0xFF == ord("b"):
+                movement.directLeftRight(ser, -90)
+            if cv2.waitKey(1) & 0xFF == ord("f"):
+                movement.thrower(ser, 200)
+            if cv2.waitKey(1) & 0xFF == ord("r"):
+                movement.throwerStop(ser)
+            if cv2.waitKey(1) & 0xFF == ord("g"):
+                print("Here I go")
+                break
+
 
 cap.release()
 cv2.destroyAllWindows()
