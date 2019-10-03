@@ -5,7 +5,8 @@ import serial
 import time
 import movement
 import numpy as np
-import keyboard_control
+import xbeeListener
+import threading, queue
 #NB realsesnse is loaded with "realsense-viewer" in terminal
 
 ser = serial.Serial("/dev/ttyACM0")
@@ -19,7 +20,15 @@ ser.write(str.encode("\r \n"))
 firstMillis = int(round(time.time()*1000))
 newMillis = 0
 
+global currentlyMove
+
 throwerStatus = False
+currentlyMove = False
+actualMove = False
+q = queue.Queue()
+
+setSelfID = "A"
+setFieldID = "A"
 
 kernel = np.ones((5,5), np.uint8)
 
@@ -35,7 +44,26 @@ except KeyError:
 
 cap = cv2.VideoCapture(2)
 
+def xbeeThread(ser, setFieldID, setSelfID, currentlyMove, q):
+    import xbeeListener
+    while True:
+        currentlyMove = xbeeListener.messenger(ser, setFieldID, setSelfID, currentlyMove)
+        q.put(currentlyMove)
+        print(currentlyMove)
+
+xbeeThreadStarter = threading.Thread(target=xbeeThread, args=(ser, setFieldID, setSelfID, currentlyMove, q))
+xbeeThreadStarter.start()
+
 while cap.isOpened():
+    # Check for messages from xBee
+    currentlyMove = q.get()
+    #currentlyMove = xbeeListener.messenger(ser, setFieldID, setSelfID, currentlyMove)
+    if currentlyMove == False:
+        while True:
+            #currentlyMove = xbeeListener.messenger(ser, setFieldID, setSelfID, currentlyMove)
+            currentlyMove = q.get()
+            if currentlyMove == True:
+                break
 
     width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)  # float
 
@@ -57,7 +85,6 @@ while cap.isOpened():
     #cv2.line(frame, (305, 0), (305, 480), (0, 255, 0), lineThickness)
 
     while ser.inWaiting() > 0:
-        ser.readline()
         ser.flush()
 
     if biggest_ball is not None:
@@ -79,7 +106,7 @@ while cap.isOpened():
                     movement.stop(ser)
                     newMillis = int(round(time.time()*1000))
                     firstMillis = int(round(time.time()*1000))
-                    throwerStatus=False
+                    throwerStatus = False
                     while newMillis - firstMillis < 1000:
                         newMillis = int(round(time.time()*1000))
                         print(str(throwerStatus) + " duringMillis")
