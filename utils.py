@@ -34,6 +34,11 @@ def find_basket(src):
     contours_basket, _ = cv2.findContours(src, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
 
     for contour in contours_basket:
+        M = cv2.moments(contour)
+
+        cX = int(M["m10"] / M["m00"])
+        cY = int(M["m01"] / M["m00"])
+
         (x, y, w, h) = cv2.boundingRect(contour)
         if w >= 15 and h >= 15:
-            return (int(x), int(y)), int(w), int(h)
+            return (int(x), int(y)), (int(w), int(h)), (int(cX), int(cY))

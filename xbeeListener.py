@@ -1,4 +1,3 @@
-
 def messenger(ser, setFieldID, setSelfID, currentlyMove):
 
         message = ser.read(19)
