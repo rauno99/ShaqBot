@@ -2,8 +2,9 @@ import math, serial, threading, time
 
 class Mainboard:
 
-
     def __init__(self):
+        self.W = 16
+        self.F = (104 * 100) / self.W
         self.wheel1 = 0
         self.wheel2 = 0
         self.robotSpeed = 60
@@ -24,13 +25,11 @@ class Mainboard:
             setFieldID = self.setFieldID
             setSelfID = self.setSelfID
             message = self.ser.read(19)
-            if len(message) > 3:
-                print(message)
             if len(message) > 17:
                 message = str(message[5:17])
                 fieldID = str(message[3])
                 selfID = str(message[4])
-                print(message)
+                #print(message)
                 self.ser.flush()
                 if fieldID == setFieldID and (selfID == setSelfID or selfID == "X"):
                     if "START" in message:
@@ -64,27 +63,30 @@ class Mainboard:
 
     def moveForward(self):
         self.ser.write(str.encode("sd:0:30:-30 \r \n"))
-        #print("forward")
+        print("forward")
+        return
+
+    def boost(self):
+        self.ser.write(str.encode("sd:0:100:-100 \r \n"))
         return
 
     def moveBack(self):
         self.ser.write(str.encode("sd:0:-10:10 \r \n"))
         #print("back")
         return
-
     def rotateLeftAndRight(self, x, x1):
 
         if x1 is not None:
-            if x1 > 300:
-                self.wheel1 = 30
-            elif x1 < 310:
-                self.wheel1 = -30
+            if x1 > 310:
+                self.wheel1 = 15
+            elif x1 < 330:
+                self.wheel1 = -15
         else:
             self.wheel1 = -30
 
-        if x > 330:
+        if x > 350:
             self.wheel2 = (x-320)/2
-        elif x < 310:
+        elif x < 290:
             self.wheel2 = (x-320)/2
         else:
             self.wheel2 = 0
@@ -134,10 +136,6 @@ class Mainboard:
         self.ser.write(str.encode("sd:" + str(wheelLinearVelocity1) + ":" + str(wheelLinearVelocity2) + ":" + str(wheelLinearVelocity3) + " \r \n"))
         return
 
-    def makeThrow(self, speed):
-        Mainboard.moveForward(self)
-        Mainboard.thrower(self, speed)
-
     def thrower(self, speed):
         self.ser.write(str.encode("d:"+str(speed) + " \r \n"))
         #print("thrower")
@@ -146,4 +144,59 @@ class Mainboard:
     def throwerStop(self):
         self.ser.write(str.encode("d:"+ str(140) + " \r \n"))
         #print("thrower stop")
+        return
+
+    def mapping(self, widthMin, widthMax, angleMin, angleMax, basketWidth):
+        # Basically arduino map function
+        try:
+            print("basketwidth"+str(basketWidth))
+            widthSpan = widthMax - widthMin
+            angleSpan = angleMax - angleMin
+
+            valueScaled = float(basketWidth - widthMin) / float(widthSpan)
+            throwerAngleCalculation = int(angleMin + (valueScaled * angleSpan))
+            print("ThrowerAngle" + str(throwerAngleCalculation))
+            self.ser.write(str.encode("sv:" + str(throwerAngleCalculation) + " \r \n"))
+        except NameError:
+            print("error")
+
+    def getSpeedsFromList(self, listSpeeds, distance):
+        for x in listSpeeds:
+            xZero = float(x[0])
+            xOne = float(x[1])
+
+            if xZero < distance:
+                distanceMin = xZero
+                speedMin = xOne
+            elif xZero > distance:
+                distanceMax = xZero
+                speedMax = xOne
+                print("results " + str(speedMin) + " " + str(speedMax) + " " + str(distanceMin) + " " + str(distanceMax) + " " + str(distance))
+                return speedMin, speedMax, distanceMin, distanceMax, distance
+
+
+
+    def throwerSpeeds(self, distanceMin, distanceMax, speedMin, speedMax, distance):
+        # Basically arduino map function
+        try:
+            print("distance " + str(distance))
+            widthSpan = speedMax - speedMin
+            angleSpan = distanceMax - distanceMin
+
+            valueScaled = float(distance - speedMin) / float(widthSpan)
+            throwerSpeed = int(distanceMin + (valueScaled * angleSpan))
+
+            if throwerSpeed > 0:
+                print("throwerSpeed2 " + str(throwerSpeed))
+                return throwerSpeed
+        except NameError:
+            print("error")
+
+    def distance(self, width):
+        distance = round((self.W * self.F) / width ,2)
+        return distance
+
+
+    def servoStop(self):
+        self.ser.write(str.encode("sv:" + str(600) + " \r \n"))
         return

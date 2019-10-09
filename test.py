@@ -11,7 +11,8 @@ from newmovement import Mainboard
 firstMillis = int(round(time.time()*1000))
 newMillis = 0
 throwerStatus = False
-
+throwerSpeeds = sorted(utils.readThrowerFile("throwerFile.csv"))
+count = 0
 kernel = np.ones((5,5), np.uint8)
 
 try:
@@ -32,6 +33,7 @@ while cap.isOpened():
 
 
     # Check for messages from xBee
+    movement.currentlyMove = True
     if movement.currentlyMove:
 
         width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)  # float
@@ -67,18 +69,31 @@ while cap.isOpened():
                     cv2.rectangle(frame, (x1, y1), (x1 + w, y1 + h), (0, 255, 0), 2)
 
                     frame = cv2.line(frame, (cX, 0), (cX, 700), (255, 0, 0), 5)
-
+                    #print(w)
+                    print("Distance " + str(movement.distance(w)))
                     #korviga ühele joonele
                     if cX < 330 and cX > 310:
                         #print("Vahemik oige")
-                        movement.stop()
-                        if throwerStatus == False:
-                            firstMillis = int(round(time.time()*1000))
-                            movement.makeThrow(200)
+                        #movement.stop()
+                        if not throwerStatus:
+                            movement.mapping(20, 50, 1000, 1300, w)
+                            movement.moveForward()
+                            #speedMin, speedMax, distanceMin, distanceMax, distance = (movement.getSpeedsFromList(throwerSpeeds, movement.distance(w)))
+
+                            #throwerSpeed = movement.throwerSpeeds(speedMin, speedMax, distanceMin, distanceMax, distance)
+                            #print("throwerspeed " + str(throwerSpeed))
+                            #movement.thrower(throwerSpeed)
+                            movement.thrower(175)
                             throwerStatus = True
+                            time.sleep(0.75)
+                            count += 1
+                            print("Throw number: " + str(count))
 
                     else:
                         #print(x1)
+                        if throwerStatus:
+                            throwerStatus = False
+                            movement.throwerStop()
                         movement.rotateLeftAndRight(x, cX)
                         #print("vahemik vale")
 
@@ -97,7 +112,6 @@ while cap.isOpened():
         cv2.imshow("frame", frame)
 
         if cv2.waitKey(1) & 0xFF == ord("q"):
-            movement.xbeethread.stop()
             break
         if cv2.waitKey(1) & 0xFF == ord("p"):
             print("Manual override")
@@ -121,10 +135,12 @@ while cap.isOpened():
                     movement.thrower(200)
                 if cv2.waitKey(1) & 0xFF == ord("r"):
                     movement.throwerStop()
+                if cv2.waitKey(1) & 0xFF == ord("x"):
+                    movement.boost()
                 if cv2.waitKey(1) & 0xFF == ord("g"):
                     print("Here I go")
                     break
 
-
+movement.servoStop()
 cap.release()
 cv2.destroyAllWindows()

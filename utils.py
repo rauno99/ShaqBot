@@ -1,6 +1,17 @@
 import cv2
 import numpy as np
 
+def readThrowerFile(failname):
+    fail = open(failname)
+
+    andmed = []
+    for rida in fail:
+        jupp = rida.strip().split(",")
+        distance = jupp[0]
+        speed = jupp[1]
+        andmed.append((distance, speed))
+    fail.close()
+    return andmed
 
 def get_color_range_mean(color_range):
     return tuple([
