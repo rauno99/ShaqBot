@@ -7,8 +7,9 @@ def readThrowerFile(failname):
     andmed = []
     for rida in fail:
         jupp = rida.strip().split(",")
-        distance = jupp[0]
-        speed = jupp[1]
+        print(jupp)
+        distance = int(jupp[0])
+        speed = int(jupp[1])
         andmed.append((distance, speed))
     fail.close()
     return andmed
@@ -51,5 +52,5 @@ def find_basket(src):
         cY = int(M["m01"] / M["m00"])
 
         (x, y, w, h) = cv2.boundingRect(contour)
-        if w >= 15 and h >= 15:
+        if w >= 30 and h >= 15:
             return (int(x), int(y)), (int(w), int(h)), (int(cX), int(cY))

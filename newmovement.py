@@ -1,10 +1,10 @@
-import math, serial, threading, time
+import math, serial, threading
 
 class Mainboard:
 
     def __init__(self):
         self.W = 16
-        self.F = (104 * 100) / self.W
+        self.F = (108 * 100) / self.W
         self.wheel1 = 0
         self.wheel2 = 0
         self.robotSpeed = 60
@@ -77,16 +77,16 @@ class Mainboard:
     def rotateLeftAndRight(self, x, x1):
 
         if x1 is not None:
-            if x1 > 310:
+            if x1 > 325:
                 self.wheel1 = 15
-            elif x1 < 330:
+            elif x1 < 329:
                 self.wheel1 = -15
         else:
             self.wheel1 = -30
 
-        if x > 350:
+        if x > 337:
             self.wheel2 = (x-320)/2
-        elif x < 290:
+        elif x < 317:
             self.wheel2 = (x-320)/2
         else:
             self.wheel2 = 0
@@ -105,7 +105,7 @@ class Mainboard:
     def directLeftRight(self, angle):
         #-90 is RIGHT, 90 is LEFT
 
-        robotDirectionAngle = int(math.degrees(math.atan((320)) + angle))
+        robotDirectionAngle = int(math.degrees(math.atan((327)) + angle))
 
         wheelLinearVelocity1 = int(-self.robotSpeed * math.cos(math.radians(robotDirectionAngle - self.wheelAngle1)))
         wheelLinearVelocity2 = int(-self.robotSpeed * math.cos(math.radians(robotDirectionAngle - self.wheelAngle2)))
@@ -121,7 +121,7 @@ class Mainboard:
 
         #robotDirectionAngle calcualted from x and y coords of ball
         try:
-            robotDirectionAngle = int(math.degrees(math.atan((320 - x)/y)) + 90)
+            robotDirectionAngle = int(math.degrees(math.atan((327 - x)/y)) + 90)
         except ZeroDivisionError:
             robotDirectionAngle = 0.1
 
@@ -146,6 +146,9 @@ class Mainboard:
         #print("thrower stop")
         return
 
+    def servoMaxAngle(self):
+        self.ser.write(str.encode("sv:1000 \r \n"))
+
     def mapping(self, widthMin, widthMax, angleMin, angleMax, basketWidth):
         # Basically arduino map function
         try:
@@ -161,10 +164,10 @@ class Mainboard:
             print("error")
 
     def getSpeedsFromList(self, listSpeeds, distance):
+
         for x in listSpeeds:
             xZero = float(x[0])
             xOne = float(x[1])
-
             if xZero < distance:
                 distanceMin = xZero
                 speedMin = xOne
@@ -174,10 +177,7 @@ class Mainboard:
                 print("results " + str(speedMin) + " " + str(speedMax) + " " + str(distanceMin) + " " + str(distanceMax) + " " + str(distance))
                 return speedMin, speedMax, distanceMin, distanceMax, distance
 
-
-
     def throwerSpeeds(self, distanceMin, distanceMax, speedMin, speedMax, distance):
-        # Basically arduino map function
         try:
             print("distance " + str(distance))
             widthSpan = speedMax - speedMin

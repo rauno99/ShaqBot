@@ -2,7 +2,6 @@ import cv2
 import config
 import utils
 import time
-import serial
 import numpy as np
 from newmovement import Mainboard
 
@@ -11,9 +10,11 @@ from newmovement import Mainboard
 firstMillis = int(round(time.time()*1000))
 newMillis = 0
 throwerStatus = False
-throwerSpeeds = sorted(utils.readThrowerFile("throwerFile.csv"))
+throwerSpeeds = utils.readThrowerFile("throwerFile.csv")
+throwerSpeeds = sorted(throwerSpeeds)
 count = 0
 kernel = np.ones((5,5), np.uint8)
+#print(throwerSpeeds)
 
 try:
     ball_color = config.get_color_range("ball")
@@ -53,7 +54,7 @@ while cap.isOpened():
 
         lineThickness = 2
         #cv2.line(frame, (335, 0), (335, 480), (0, 255, 0), lineThickness)
-        #cv2.line(frame, (305, 0), (305, 480), (0, 255, 0), lineThickness)
+        cv2.line(frame, (327, 0), (327, 480), (0, 255, 0), lineThickness)
 
 
         if biggest_ball is not None:
@@ -61,7 +62,7 @@ while cap.isOpened():
             cv2.circle(frame, (x, y), radius, utils.get_color_range_mean(ball_color), 5)
             #print(x, y)
 
-            if y < 350:
+            if y < 360:
                 movement.omniDirectional(x, y)
             else:
                 if find_basket is not None:
@@ -69,21 +70,22 @@ while cap.isOpened():
                     cv2.rectangle(frame, (x1, y1), (x1 + w, y1 + h), (0, 255, 0), 2)
 
                     frame = cv2.line(frame, (cX, 0), (cX, 700), (255, 0, 0), 5)
-                    #print(w)
+                    #print("width: " + str(w))
                     print("Distance " + str(movement.distance(w)))
                     #korviga ühele joonele
-                    if cX < 330 and cX > 310:
+                    if cX < 331 and cX > 325:
                         #print("Vahemik oige")
                         #movement.stop()
                         if not throwerStatus:
                             movement.mapping(20, 50, 1000, 1300, w)
                             movement.moveForward()
-                            #speedMin, speedMax, distanceMin, distanceMax, distance = (movement.getSpeedsFromList(throwerSpeeds, movement.distance(w)))
+                            speedMin, speedMax, distanceMin, distanceMax, distance = (movement.getSpeedsFromList(throwerSpeeds, movement.distance(w)))
 
-                            #throwerSpeed = movement.throwerSpeeds(speedMin, speedMax, distanceMin, distanceMax, distance)
-                            #print("throwerspeed " + str(throwerSpeed))
-                            #movement.thrower(throwerSpeed)
-                            movement.thrower(175)
+                            throwerSpeed = movement.throwerSpeeds(speedMin, speedMax, distanceMin, distanceMax, distance)
+                            print("throwerspeed " + str(throwerSpeed))
+                            if distance < 60:
+                                movement.servoMaxAngle()
+                            movement.thrower(throwerSpeed)
                             throwerStatus = True
                             time.sleep(0.75)
                             count += 1
@@ -115,8 +117,11 @@ while cap.isOpened():
             break
         if cv2.waitKey(1) & 0xFF == ord("p"):
             print("Manual override")
+            center = 327
             while True:
+
                 _, frame = cap.read()
+                cv2.line(frame, (center, 0), (center, 480), (0, 255, 0), lineThickness)
                 cv2.imshow("frame", frame)
 
                 if cv2.waitKey(1) & 0xFF == ord("w"):
@@ -137,6 +142,12 @@ while cap.isOpened():
                     movement.throwerStop()
                 if cv2.waitKey(1) & 0xFF == ord("x"):
                     movement.boost()
+                if cv2.waitKey(1) & 0xFF == ord("o"):
+                    center += 1
+                    print(center)
+                if cv2.waitKey(1) & 0xFF == ord("p"):
+                    center -= 1
+                    print(center)
                 if cv2.waitKey(1) & 0xFF == ord("g"):
                     print("Here I go")
                     break
