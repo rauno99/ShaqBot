@@ -4,8 +4,11 @@ import utils
 import time
 import numpy as np
 from newmovement import Mainboard
+import realsenseloader
 
 #NB realsesnse is loaded with "realsense-viewer" in terminal
+
+realsenseloader.load_realsense()
 
 firstMillis = int(round(time.time()*1000))
 newMillis = 0
@@ -14,6 +17,7 @@ throwerSpeeds = utils.readThrowerFile("throwerFile.csv")
 throwerSpeeds = sorted(throwerSpeeds)
 count = 0
 kernel = np.ones((5,5), np.uint8)
+circling = True
 #print(throwerSpeeds)
 
 try:
@@ -22,14 +26,9 @@ except KeyError:
     exit("Ball color has not been thresholded, run threshold.py")
 
 try:
-    basket_color = config.get_color_range("pink")
+    basket_color = config.get_color_range("blue")
 except KeyError:
-    exit("Blue color has not been thresholded, run threshold.py")
-
-def capWhileMoving(frame):
-    while True:
-        _, frame = cap.read()
-
+    exit("Blue col)or has not been thresholded, run threshold.py")
 
 cap = cv2.VideoCapture(2)
 
@@ -42,12 +41,7 @@ while cap.isOpened():
     # Check for messages from xBee
     if movement.currentlyMove:
 
-        width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)  # float
-
-        millis = int(round(time.time()*1000))
-        #if millis -firstMillis < 5000:
-        #    ser.write(str.encode("sd:0:0:0:0"))
-        #    ser.write(str.encode("\r \n"))
+        #width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)  # float
 
         _, frame = cap.read()
 
@@ -69,8 +63,6 @@ while cap.isOpened():
 
             if y < 390:
                 movement.omniDirectional(x, y)
-            elif y > 410:
-                movement.moveBack()
             else:
                 if find_basket is not None:
                     (x1, y1), (w, h), (cX, cY) = find_basket
@@ -80,32 +72,35 @@ while cap.isOpened():
                     #print("width: " + str(w))
                     #print("Distance " + str(movement.distance(w)))
                     #korviga ühele joonele
-                    if cX < 331 and cX > 325: #331 325
+                    if cX < 331 and cX > 325 and circling == True: #331 325
                         #print("Vahemik oige")
                         #movement.stop()
                         if not throwerStatus:
                             throwerStatus = True
-                            millis = int(round(time.time() * 1000))
-                            newMillis = int(round(time.time() * 1000))
                             print("ok")
                             movement.stop()
+                            circling = False
                             movement.mapping(20, 50, 1100, 1300, w)
-                            #time.sleep(0.8)
                             movement.moveForward()
-                            speedMin, speedMax, distanceMin, distanceMax, distance = (movement.getSpeedsFromList(throwerSpeeds, movement.distance(w)))
-                            print("Distance " + str(distance))
+                            movement.getThrowerSpeed(w)
+                            #time.sleep(0.8)
 
-                            throwerSpeed = movement.throwerSpeeds(speedMin, speedMax, distanceMin, distanceMax, distance)
+                            #print("Distance " + str(distance))
                             #print("throwerspeed " + str(throwerSpeed))
-                            if distance < 60:
-                                movement.servoMaxAngle()
-                            movement.thrower(throwerSpeed)
+
+                            #if distance < 60:
+                            #    movement.servoMaxAngle()
+
+                            #movement.thrower(throwerSpeed)
                             #movement.thrower(180)
 
-                            #time.sleep(0.7)
                             count += 1
                             print("Throw number: " + str(count))
                             movement.servoDown()
+
+
+                    elif circling == False:
+                        circling = True
 
                     else:
                         #print(x1)
@@ -134,10 +129,10 @@ while cap.isOpened():
         if cv2.waitKey(1) & 0xFF == ord("q"):
             break
         if cv2.waitKey(1) & 0xFF == ord("p"):
+            movement.stop()
             print("Manual override")
             center = 327
             while True:
-
                 _, frame = cap.read()
                 cv2.line(frame, (center, 0), (center, 480), (0, 255, 0), lineThickness)
                 cv2.imshow("frame", frame)

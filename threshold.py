@@ -1,8 +1,10 @@
 import cv2
 from functools import partial
-
+import realsenseloader
 import config
 import utils
+
+realsenseloader.load_realsense()
 
 color_name = input("Color name: ")
 print("Select color range and press s to save, q to quit")

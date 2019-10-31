@@ -1,81 +1,102 @@
-import math, serial, threading, time
+import math, serial, threading, time, utils
 
 class Mainboard:
 
+    def communication(self):
+        while True:
+            time.sleep(0.002)
+            vastus = self.ser.read(19)
+            if len(vastus) > 17:
+                self.messenger(vastus)
+
+            text = ("sd:" + str(self.wheel1) + ":" + str(self.wheel2) + ":" + str(self.wheel3) + "\r\n")
+            #print("siin")
+            self.ser.write(text.encode('utf-8'))
+            time.sleep(0.002)
+            self.ser.write(('d:' + str(self.throwerspeed) + '\r\n').encode('utf-8'))
+            time.sleep(0.002)
+            self.ser.write(("sv:" + str(self.throwerangle) + "\r \n").encode("utf-8"))
+
     def __init__(self):
+        self.throwerSpeedsList = sorted(utils.readThrowerFile("throwerFile.csv"))
         self.W = 16
         self.F = (108 * 100) / self.W
         self.wheel1 = 0
         self.wheel2 = 0
+        self.wheel3 = 0
+        self.throwerspeed = 0
+        self.throwerangle = 0
         self.robotSpeed = 60
         self.wheelAngle1 = 0
         self.wheelAngle2 = 240
         self.wheelAngle3 = 120
+        self.distance = 0
         self.currentlyMove = False
         self.setFieldID = "A"
         self.setSelfID = "A"
         self.message = ""
         print("overwrite")
-        self.xbeethread = threading.Thread(target=self.messenger, daemon=True)
-        self.ser = serial.Serial("/dev/ttyACM0", timeout = 0.01, baudrate = 9600)
-        self.xbeethread.start()
+        self.communicationThread = threading.Thread(target=self.communication, daemon=True)
+        self.ser = serial.Serial("/dev/ttyACM0", timeout=0.01, baudrate = 9600)
+        self.communicationThread.start()
 
-    def messenger(self):
-        while True:
-            setFieldID = self.setFieldID
-            setSelfID = self.setSelfID
-            message = self.ser.read(19)
+    def messenger(self, message):
+        setFieldID = self.setFieldID
+        setSelfID = self.setSelfID
+        #print(message)
+        if len(message) > 17:
+            message = str(message[5:17])
+            fieldID = str(message[3])
+            selfID = str(message[4])
             #print(message)
-            if len(message) > 17:
-                message = str(message[5:17])
-                fieldID = str(message[3])
-                selfID = str(message[4])
-                #print(message)
-                self.ser.flush()
-                #print(message)
-                if fieldID == setFieldID and (selfID == setSelfID or selfID == "X"):
-                    if "START" in message:
-                        self.ser.write(str.encode('rf:a' + fieldID + setSelfID + 'ACK----- \r \n'))
-                        print("start")
-                        self.currentlyMove = True
-                    elif "STOP" in message:
-                        self.ser.write(str.encode('rf:a' + fieldID + setSelfID + 'ACK----- \r \n'))
-                        print("Stop!")
-                        self.currentlyMove = False
-                    elif "PING" in message:
-                        print("DOS")
-                        self.ser.write(str.encode('rf:a' + fieldID + setSelfID + 'ACK----- \r \n'))
-                        self.currentlyMove
-                    else:
-                        self.currentlyMove
+            self.ser.flush()
+            #print(message)
+            if fieldID == setFieldID and (selfID == setSelfID or selfID == "X"):
+                if "START" in message:
+                    self.ser.write(str.encode('rf:a' + fieldID + setSelfID + 'ACK----- \r \n'))
+                    print("start")
+                    self.currentlyMove = True
+                elif "STOP" in message:
+                    self.ser.write(str.encode('rf:a' + fieldID + setSelfID + 'ACK----- \r \n'))
+                    print("Stop!")
+                    self.currentlyMove = False
+                elif "PING" in message:
+                    print("DOS")
+                    self.ser.write(str.encode('rf:a' + fieldID + setSelfID + 'ACK----- \r \n'))
+                    self.currentlyMove
                 else:
                     self.currentlyMove
             else:
                 self.currentlyMove
+        else:
+            self.currentlyMove
 
     def moveLeft(self):
-        self.ser.write(str.encode("sd:-20:-20:-20 \r \n"))
-        #print("left")current
-        return
+        self.wheel1 = -10
+        self.wheel2 = -10
+        self.wheel3 = -10
 
     def moveRight(self):
-        self.ser.write(str.encode("sd:10:10:10 \r \n"))
-        #print("right")
-        return
+        self.wheel1 = 10
+        self.wheel2 = 10
+        self.wheel3 = 10
 
     def moveForward(self):
-        self.ser.write(str.encode("sd:0:30:-30 \r \n"))
-        print("forward")
-        return
+        self.wheel1 = 0
+        self.wheel2 = 30
+        self.wheel3 = -30
 
     def boost(self):
-        self.ser.write(str.encode("sd:0:100:-100 \r \n"))
-        return
+        self.wheel1 = 0
+        self.wheel2 = 100
+        self.wheel3 = 100
 
     def moveBack(self):
+        self.wheel1 = 0
+        self.wheel2 = -10
+        self.wheel3 = 10
         self.ser.write(str.encode("sd:0:-10:10 \r \n"))
-        #print("back")
-        return
+
     def rotateLeftAndRight(self, x, x1):
         if x1 is not None:
             if x1 > 325: #325
@@ -91,17 +112,18 @@ class Mainboard:
             self.wheel2 = (x-320)/2
         else:
             self.wheel2 = 0
-        self.ser.write(str.encode("sd:" + str(self.wheel1) + ":"+ str(self.wheel2) +":"+ str(self.wheel2) +" \r \n"))
-        return
+
+        self.wheel3 = self.wheel2
 
     def rotateRight(self):
-        self.ser.write(str.encode("sd:20:0:0 \r \n"))
-        return
+        self.wheel1 = 20
+        self.wheel2 = 0
+        self.wheel3 = 0
 
     def stop(self):
-        self.ser.write(str.encode("sd:0:0:0 \r \n"))
-        #qprint("stop")
-        return
+        self.wheel1 = 0
+        self.wheel2 = 0
+        self.wheel3 = 0
 
     def directLeftRight(self, angle):
         #-90 is RIGHT, 90 is LEFT
@@ -113,9 +135,9 @@ class Mainboard:
         wheelLinearVelocity3 = int(-self.robotSpeed * math.cos(math.radians(robotDirectionAngle - self.wheelAngle3)))
 
         # print(wheelLinearVelocity1, wheelLinearVelocity2, wheelLinearVelocity3)
-
-        self.ser.write(str.encode("sd:" + str(wheelLinearVelocity1) + ":" + str(wheelLinearVelocity2) + ":" + str(
-            wheelLinearVelocity3) + " \r \n"))
+        self.wheel1 = wheelLinearVelocity1
+        self.wheel2 = wheelLinearVelocity2
+        self.wheel3 = wheelLinearVelocity3
 
 
     def omniDirectional(self, x, y):
@@ -134,23 +156,19 @@ class Mainboard:
 
         #print(wheelLinearVelocity1, wheelLinearVelocity2, wheelLinearVelocity3)
 
-        self.ser.write(str.encode("sd:" + str(wheelLinearVelocity1) + ":" + str(wheelLinearVelocity2) + ":" + str(wheelLinearVelocity3) + " \r \n"))
-        return
+        self.wheel1 = wheelLinearVelocity1
+        self.wheel2 = wheelLinearVelocity2
+        self.wheel3 = wheelLinearVelocity3
+
 
     def thrower(self, speed):
-        time.sleep(0.02)
-        self.ser.write(str.encode("d:"+str(speed) + " \r \n"))
-        time.sleep(0.02)
-        #print("thrower")
-        return
+        self.throwerspeed = speed
 
     def throwerStop(self):
-        self.ser.write(str.encode("d:"+ str(140) + " \r \n"))
-        #print("thrower stop")
-        return
+        self.throwerspeed = 0
 
     def servoMaxAngle(self):
-        self.ser.write(str.encode("sv:1000 \r \n"))
+        self.throwerangle = 1000
 
     def mapping(self, widthMin, widthMax, angleMin, angleMax, basketWidth):
         # Basically arduino map function
@@ -160,14 +178,14 @@ class Mainboard:
             angleSpan = angleMax - angleMin
 
             valueScaled = float(basketWidth - widthMin) / float(widthSpan)
-            throwerAngleCalculation = int(angleMin + (valueScaled * angleSpan))
-            print("ThrowerAngle" + str(throwerAngleCalculation))
-            self.ser.write(str.encode("sv:" + str(throwerAngleCalculation) + " \r \n"))
+            self.throwerangle = int(angleMin + (valueScaled * angleSpan))
+            #print("ThrowerAngle" + str(throwerAngleCalculation))
         except NameError:
             print("error")
 
-    def getSpeedsFromList(self, listSpeeds, distance):
-        for x in listSpeeds:
+    def getThrowerSpeed(self, w):
+        distance = self.calc_distance(w)
+        for x in self.throwerSpeedsList:
             xZero = float(x[0])
             xOne = float(x[1])
             if xZero < distance:
@@ -176,11 +194,8 @@ class Mainboard:
             elif xZero > distance:
                 distanceMax = xZero
                 speedMax = xOne
-                print("results " + str(speedMin) + " " + str(speedMax) + " " + str(distanceMin) + " " + str(distanceMax) + " " + str(distance))
-                print("x: ", xZero, xOne)
-                return speedMin, speedMax, distanceMin, distanceMax, distance
-
-    def throwerSpeeds(self, distanceMin, distanceMax, speedMin, speedMax, distance):
+                #print("results " + str(speedMin) + " " + str(speedMax) + " " + str(distanceMin) + " " + str(distanceMax) + " " + str(distance))
+                #print("x: ", xZero, xOne)
         try:
             print("distance " + str(distance))
             widthSpan = speedMax - speedMin
@@ -191,19 +206,16 @@ class Mainboard:
 
             if throwerSpeed > 0:
                 print("throwerSpeed2 " + str(throwerSpeed))
-                return throwerSpeed
+                self.throwerSpeed = throwerSpeed
         except NameError:
             print("error")
 
-    def distance(self, width):
-        distance = round((self.W * self.F) / width, 2)
-        return distance
+    def calc_distance(self, width):
+        self.distance = round((self.W * self.F) / width, 2)
+        return self.distance
 
     def servoStop(self):
-        self.ser.write(str.encode("sv:" + str(600) + " \r \n"))
-        return
+        self.throwerangle = 600
 
     def servoDown(self):
-        self.ser.write(str.encode("sv:" + str(1300) + " \r \n"))
-        return
-
+        self.throwerangle = 1300
