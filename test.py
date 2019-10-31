@@ -22,9 +22,14 @@ except KeyError:
     exit("Ball color has not been thresholded, run threshold.py")
 
 try:
-    basket_color = config.get_color_range("blue")
+    basket_color = config.get_color_range("pink")
 except KeyError:
     exit("Blue color has not been thresholded, run threshold.py")
+
+def capWhileMoving(frame):
+    while True:
+        _, frame = cap.read()
+
 
 cap = cv2.VideoCapture(2)
 
@@ -32,9 +37,9 @@ movement = Mainboard()
 
 while cap.isOpened():
 
+    movement.currentlyMove = True
 
     # Check for messages from xBee
-    movement.currentlyMove = True
     if movement.currentlyMove:
 
         width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)  # float
@@ -62,8 +67,10 @@ while cap.isOpened():
             cv2.circle(frame, (x, y), radius, utils.get_color_range_mean(ball_color), 5)
             #print(x, y)
 
-            if y < 360:
+            if y < 390:
                 movement.omniDirectional(x, y)
+            elif y > 410:
+                movement.moveBack()
             else:
                 if find_basket is not None:
                     (x1, y1), (w, h), (cX, cY) = find_basket
@@ -71,31 +78,41 @@ while cap.isOpened():
 
                     frame = cv2.line(frame, (cX, 0), (cX, 700), (255, 0, 0), 5)
                     #print("width: " + str(w))
-                    print("Distance " + str(movement.distance(w)))
+                    #print("Distance " + str(movement.distance(w)))
                     #korviga ühele joonele
-                    if cX < 331 and cX > 325:
+                    if cX < 331 and cX > 325: #331 325
                         #print("Vahemik oige")
                         #movement.stop()
                         if not throwerStatus:
-                            movement.mapping(20, 50, 1000, 1300, w)
+                            throwerStatus = True
+                            millis = int(round(time.time() * 1000))
+                            newMillis = int(round(time.time() * 1000))
+                            print("ok")
+                            movement.stop()
+                            movement.mapping(20, 50, 1100, 1300, w)
+                            #time.sleep(0.8)
                             movement.moveForward()
                             speedMin, speedMax, distanceMin, distanceMax, distance = (movement.getSpeedsFromList(throwerSpeeds, movement.distance(w)))
+                            print("Distance " + str(distance))
 
                             throwerSpeed = movement.throwerSpeeds(speedMin, speedMax, distanceMin, distanceMax, distance)
-                            print("throwerspeed " + str(throwerSpeed))
+                            #print("throwerspeed " + str(throwerSpeed))
                             if distance < 60:
                                 movement.servoMaxAngle()
                             movement.thrower(throwerSpeed)
-                            throwerStatus = True
-                            time.sleep(0.75)
+                            #movement.thrower(180)
+
+                            #time.sleep(0.7)
                             count += 1
                             print("Throw number: " + str(count))
+                            movement.servoDown()
 
                     else:
                         #print(x1)
                         if throwerStatus:
                             throwerStatus = False
                             movement.throwerStop()
+                            movement.servoDown()
                         movement.rotateLeftAndRight(x, cX)
                         #print("vahemik vale")
 
@@ -107,6 +124,7 @@ while cap.isOpened():
             movement.moveLeft()
             if throwerStatus:
                 movement.throwerStop()
+                movement.servoStop()
                 throwerStatus = False
                 #print(throwerStatus)
 

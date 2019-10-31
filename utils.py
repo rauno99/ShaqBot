@@ -52,5 +52,6 @@ def find_basket(src):
         cY = int(M["m01"] / M["m00"])
 
         (x, y, w, h) = cv2.boundingRect(contour)
-        if w >= 30 and h >= 15:
+        #print("Basket size: ", w*h)
+        if  h >= 15 and (w*h >= 700):
             return (int(x), int(y)), (int(w), int(h)), (int(cX), int(cY))

@@ -1,4 +1,4 @@
-import math, serial, threading
+import math, serial, threading, time
 
 class Mainboard:
 
@@ -25,12 +25,14 @@ class Mainboard:
             setFieldID = self.setFieldID
             setSelfID = self.setSelfID
             message = self.ser.read(19)
+            #print(message)
             if len(message) > 17:
                 message = str(message[5:17])
                 fieldID = str(message[3])
                 selfID = str(message[4])
                 #print(message)
                 self.ser.flush()
+                #print(message)
                 if fieldID == setFieldID and (selfID == setSelfID or selfID == "X"):
                     if "START" in message:
                         self.ser.write(str.encode('rf:a' + fieldID + setSelfID + 'ACK----- \r \n'))
@@ -39,7 +41,7 @@ class Mainboard:
                     elif "STOP" in message:
                         self.ser.write(str.encode('rf:a' + fieldID + setSelfID + 'ACK----- \r \n'))
                         print("Stop!")
-                        self.currentlyMove =  False
+                        self.currentlyMove = False
                     elif "PING" in message:
                         print("DOS")
                         self.ser.write(str.encode('rf:a' + fieldID + setSelfID + 'ACK----- \r \n'))
@@ -52,7 +54,7 @@ class Mainboard:
                 self.currentlyMove
 
     def moveLeft(self):
-        self.ser.write(str.encode("sd:-10:-10:-10 \r \n"))
+        self.ser.write(str.encode("sd:-20:-20:-20 \r \n"))
         #print("left")current
         return
 
@@ -75,18 +77,17 @@ class Mainboard:
         #print("back")
         return
     def rotateLeftAndRight(self, x, x1):
-
         if x1 is not None:
-            if x1 > 325:
+            if x1 > 325: #325
                 self.wheel1 = 15
-            elif x1 < 329:
-                self.wheel1 = -15
+            elif x1 < 329: #329
+                self.wheel1 = -25
         else:
-            self.wheel1 = -30
+            self.wheel1 = -40
 
-        if x > 337:
+        if x > 337: #337
             self.wheel2 = (x-320)/2
-        elif x < 317:
+        elif x < 317: #317
             self.wheel2 = (x-320)/2
         else:
             self.wheel2 = 0
@@ -137,7 +138,9 @@ class Mainboard:
         return
 
     def thrower(self, speed):
+        time.sleep(0.02)
         self.ser.write(str.encode("d:"+str(speed) + " \r \n"))
+        time.sleep(0.02)
         #print("thrower")
         return
 
@@ -164,7 +167,6 @@ class Mainboard:
             print("error")
 
     def getSpeedsFromList(self, listSpeeds, distance):
-
         for x in listSpeeds:
             xZero = float(x[0])
             xOne = float(x[1])
@@ -175,6 +177,7 @@ class Mainboard:
                 distanceMax = xZero
                 speedMax = xOne
                 print("results " + str(speedMin) + " " + str(speedMax) + " " + str(distanceMin) + " " + str(distanceMax) + " " + str(distance))
+                print("x: ", xZero, xOne)
                 return speedMin, speedMax, distanceMin, distanceMax, distance
 
     def throwerSpeeds(self, distanceMin, distanceMax, speedMin, speedMax, distance):
@@ -193,10 +196,14 @@ class Mainboard:
             print("error")
 
     def distance(self, width):
-        distance = round((self.W * self.F) / width ,2)
+        distance = round((self.W * self.F) / width, 2)
         return distance
-
 
     def servoStop(self):
         self.ser.write(str.encode("sv:" + str(600) + " \r \n"))
         return
+
+    def servoDown(self):
+        self.ser.write(str.encode("sv:" + str(1300) + " \r \n"))
+        return
+
