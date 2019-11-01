@@ -63,6 +63,8 @@ while cap.isOpened():
 
             if y < 390:
                 movement.omniDirectional(x, y)
+            elif y > 410 and circling is True:
+                movement.moveBack()
             else:
                 if find_basket is not None:
                     (x1, y1), (w, h), (cX, cY) = find_basket
@@ -72,42 +74,50 @@ while cap.isOpened():
                     #print("width: " + str(w))
                     #print("Distance " + str(movement.distance(w)))
                     #korviga ühele joonele
-                    if cX < 331 and cX > 325 and circling == True: #331 325
+
+                    if cX < 331 and cX > 325 and circling is True: #331 325
+                        firstMillis = int(round(time.time() * 1000))
                         #print("Vahemik oige")
                         #movement.stop()
-                        if not throwerStatus:
-                            throwerStatus = True
-                            print("ok")
-                            movement.stop()
-                            circling = False
-                            movement.mapping(20, 50, 1100, 1300, w)
-                            movement.moveForward()
-                            movement.getThrowerSpeed(w)
-                            #time.sleep(0.8)
+                        print("thing")
+                        print("ok")
+                        movement.stop()
+                        movement.mapping(20, 50, 1100, 1300, w)
+                        movement.getThrowerSpeed(w)
+                        circling = False
+                        #movement.getThrowerSpeed(w)
 
-                            #print("Distance " + str(distance))
-                            #print("throwerspeed " + str(throwerSpeed))
+                        print("Distance " + str(movement.calc_distance(w)))
+                        #print("throwerspeed " + str(throwerSpeed))
 
-                            #if distance < 60:
-                            #    movement.servoMaxAngle()
+                        #if distance < 60:
+                        #    movemenqt.servoMaxAngle()
 
-                            #movement.thrower(throwerSpeed)
-                            #movement.thrower(180)
-
-                            count += 1
-                            print("Throw number: " + str(count))
-                            movement.servoDown()
+                        count += 1
+                        print("Throw number: " + str(count))
+                        movement.servoDown()
 
 
                     elif circling == False:
-                        circling = True
+                        millis = int(round(time.time() * 1000))
+                        millis2 = int(round(time.time() * 1000))
+                        if cX < 345 and cX > 335:
+                            movement.rotateLeftAndRight(x, cX)
+                            millis2 = int(round(time.time() * 1000))
+                        else:
+                            if millis2 - firstMillis > 100:
+                                movement.moveSlowForward()
+                            else:
+                                movement.stop()
+
+                        if millis - firstMillis > 1000:
+                            print("here?")
+                            circling = True
+                            movement.throwerStop()
+                            movement.servoDown()
 
                     else:
                         #print(x1)
-                        if throwerStatus:
-                            throwerStatus = False
-                            movement.throwerStop()
-                            movement.servoDown()
                         movement.rotateLeftAndRight(x, cX)
                         #print("vahemik vale")
 
@@ -117,11 +127,6 @@ while cap.isOpened():
         else:
             #print("no ball")
             movement.moveLeft()
-            if throwerStatus:
-                movement.throwerStop()
-                movement.servoStop()
-                throwerStatus = False
-                #print(throwerStatus)
 
         #opening = cv2.morphologyEx(frame, cv2.MORPH_OPEN, kernel)
         cv2.imshow("frame", frame)

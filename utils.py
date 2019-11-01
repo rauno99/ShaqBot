@@ -40,7 +40,9 @@ def find_biggest_circle(src):
 
     if len(circles):
         (x, y), radius = circles[-1]
-        return (int(x), int(y)), int(radius)
+        #print(radius)
+        if radius > 1.3:
+            return (int(x), int(y)), int(radius)
 
 def find_basket(src):
     contours_basket, _ = cv2.findContours(src, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)

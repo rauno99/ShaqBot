@@ -1,20 +1,25 @@
-import math, serial, threading, time, utils
+import math, serial, threading, time, utils, scipy.interpolate
 
 class Mainboard:
 
     def communication(self):
         while True:
-            time.sleep(0.002)
+            time.sleep(0.02)
             vastus = self.ser.read(19)
             if len(vastus) > 17:
                 self.messenger(vastus)
 
-            text = ("sd:" + str(self.wheel1) + ":" + str(self.wheel2) + ":" + str(self.wheel3) + "\r\n")
+            text = ("sd:" + str(self.wheel1) + ":" + str(self.wheel2) + ":" + str(self.wheel3) + "\r \n")
             #print("siin")
             self.ser.write(text.encode('utf-8'))
-            time.sleep(0.002)
-            self.ser.write(('d:' + str(self.throwerspeed) + '\r\n').encode('utf-8'))
-            time.sleep(0.002)
+            time.sleep(0.02)
+            print("throwerSpeed" + str(self.throwerspeed))
+
+            if self.throwerspeed != self.lastThrowerSpeed:
+                print("throwTime")
+                self.ser.write(str.encode('d:' + str(self.throwerspeed) + '\r \n'))
+            self.lastThrowerSpeed = self.throwerspeed
+            time.sleep(0.02)
             self.ser.write(("sv:" + str(self.throwerangle) + "\r \n").encode("utf-8"))
 
     def __init__(self):
@@ -25,6 +30,7 @@ class Mainboard:
         self.wheel2 = 0
         self.wheel3 = 0
         self.throwerspeed = 0
+        self.lastThrowerSpeed = 0
         self.throwerangle = 0
         self.robotSpeed = 60
         self.wheelAngle1 = 0
@@ -86,6 +92,11 @@ class Mainboard:
         self.wheel2 = 30
         self.wheel3 = -30
 
+    def moveSlowForward(self):
+        self.wheel1 = 0
+        self.wheel2 = 20
+        self.wheel3 = -20
+
     def boost(self):
         self.wheel1 = 0
         self.wheel2 = 100
@@ -102,14 +113,14 @@ class Mainboard:
             if x1 > 325: #325
                 self.wheel1 = 15
             elif x1 < 329: #329
-                self.wheel1 = -25
+                self.wheel1 = -15
         else:
-            self.wheel1 = -40
+            self.wheel1 = -30
 
-        if x > 337: #337
-            self.wheel2 = (x-320)/2
-        elif x < 317: #317
-            self.wheel2 = (x-320)/2
+        if x > 330: #337
+            self.wheel2 = (x-320)/4
+        elif x < 320: #317
+            self.wheel2 = (x-320)/4
         else:
             self.wheel2 = 0
 
@@ -165,7 +176,7 @@ class Mainboard:
         self.throwerspeed = speed
 
     def throwerStop(self):
-        self.throwerspeed = 0
+        self.throwerspeed = 50
 
     def servoMaxAngle(self):
         self.throwerangle = 1000
@@ -198,15 +209,19 @@ class Mainboard:
                 #print("x: ", xZero, xOne)
         try:
             print("distance " + str(distance))
-            widthSpan = speedMax - speedMin
-            angleSpan = distanceMax - distanceMin
-
-            valueScaled = float(distance - speedMin) / float(widthSpan)
-            throwerSpeed = int(distanceMin + (valueScaled * angleSpan))
+            print(speedMin,speedMax, distanceMin, distanceMax)
+            scale = scipy.interpolate.interp1d([distanceMin, distanceMax], [speedMin, speedMax])
+            # widthSpan = speedMax - speedMin
+            # angleSpan = distanceMax - distanceMin
+            #
+            # valueScaled = float(distance - speedMin) / float(widthSpan)
+            # print(widthSpan, angleSpan, valueScaled)
+            # throwerSpeed = int(distanceMin + (valueScaled * angleSpan))
+            throwerSpeed = int(scale(distance))
 
             if throwerSpeed > 0:
                 print("throwerSpeed2 " + str(throwerSpeed))
-                self.throwerSpeed = throwerSpeed
+                self.throwerspeed = throwerSpeed
         except NameError:
             print("error")
 
