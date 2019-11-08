@@ -5,6 +5,7 @@ import time
 import numpy as np
 from newmovement import Mainboard
 import realsenseloader
+from simple_pid import PID
 
 #NB realsesnse is loaded with "realsense-viewer" in terminal
 
@@ -26,9 +27,12 @@ except KeyError:
     exit("Ball color has not been thresholded, run threshold.py")
 
 try:
-    basket_color = config.get_color_range("blue")
+    basket_color = config.get_color_range("pink")
 except KeyError:
     exit("Blue col)or has not been thresholded, run threshold.py")
+
+pid = PID(0.7, 0, 0.01, setpoint=302)
+
 
 cap = cv2.VideoCapture(2)
 
@@ -61,7 +65,7 @@ while cap.isOpened():
             cv2.circle(frame, (x, y), radius, utils.get_color_range_mean(ball_color), 5)
             #print(x, y)
 
-            if y < 390:
+            if y < 390 and circling is True:
                 movement.omniDirectional(x, y)
             elif y > 410 and circling is True:
                 movement.moveBack()
@@ -74,56 +78,76 @@ while cap.isOpened():
                     #print("width: " + str(w))
                     #print("Distance " + str(movement.distance(w)))
                     #korviga ühele joonele
+                    firstMillis = int(round(time.time() * 1000))
+                    #print("firstmillis")
+                    #if cX < 331 and cX > 325 and circling is True: #331 325
+                    if cX > 300 and cX < 304 and circling is True:
 
-                    if cX < 331 and cX > 325 and circling is True: #331 325
-                        firstMillis = int(round(time.time() * 1000))
                         #print("Vahemik oige")
                         #movement.stop()
-                        print("thing")
-                        print("ok")
+                        #print("thing")
+                        #print("ok")
                         movement.stop()
-                        movement.mapping(20, 50, 1100, 1300, w)
+                        movement.mapping(260, 500, 1800, 2000, movement.calc_distance(w))
                         movement.getThrowerSpeed(w)
+                        #movement.thrower(190)
+                        print("Distance", movement.calc_distance(w))
+                        print(movement.throwerspeed)
                         circling = False
+
                         #movement.getThrowerSpeed(w)
 
-                        print("Distance " + str(movement.calc_distance(w)))
+                        #print("Distance " + str(movement.calc_distance(w)))
                         #print("throwerspeed " + str(throwerSpeed))
 
                         #if distance < 60:
                         #    movemenqt.servoMaxAngle()
 
                         count += 1
-                        print("Throw number: " + str(count))
-                        movement.servoDown()
+                        #print("Throw number: " + str(count))
+                        #movement.servoDown()
 
 
                     elif circling == False:
-                        millis = int(round(time.time() * 1000))
-                        millis2 = int(round(time.time() * 1000))
-                        if cX < 345 and cX > 335:
-                            movement.rotateLeftAndRight(x, cX)
-                            millis2 = int(round(time.time() * 1000))
-                        else:
-                            if millis2 - firstMillis > 100:
-                                movement.moveSlowForward()
-                            else:
-                                movement.stop()
+                        while True:
+                            movement.moveForward()
+                        #v = int(pid(cX))
+                        #print("V " + str(v))
+                            #millis = int(round(time.time() * 1000))
+                        #if cX < 345 and cX > 335:
+                            #movement.rotateLeftAndRight(x, cX)
+                            #millis2 = int(round(time.time() * 1000))
+                        #else:
+                        #if millis - firstMillis > 100:
+                        #movement.moveSlowForward()
+                        #    movement.moveForwardPID(-v)
 
-                        if millis - firstMillis > 1000:
-                            print("here?")
+                        #else:
+                        #    movement.stop()
+                            time.sleep(1)
+                            #if millis - firstMillis > 2000:
+                            #print("here?")
                             circling = True
                             movement.throwerStop()
                             movement.servoDown()
+                            movement.stop()
+                            _, frame = cap.read()
+                            break
 
                     else:
                         #print(x1)
-                        movement.rotateLeftAndRight(x, cX)
+                        wheel1Speed = int(pid(cX))
+                        if wheel1Speed > 20:
+                            wheel1Speed = 20
+                        movement.rotateLeftAndRight(x, cX, -wheel1Speed)
                         #print("vahemik vale")
 
                 else:
                     #print("no basket")
-                    movement.rotateLeftAndRight(x, x1=None)
+                    movement.rotateLeftAndRight(x, x1=None, wheel1Speed=None)
+                    circling = True
+                    movement.throwerStop()
+                    movement.servoDown()
         else:
             #print("no ball")
             movement.moveLeft()

@@ -4,7 +4,7 @@ class Mainboard:
 
     def communication(self):
         while True:
-            time.sleep(0.02)
+            time.sleep(0.03)
             vastus = self.ser.read(19)
             if len(vastus) > 17:
                 self.messenger(vastus)
@@ -13,7 +13,7 @@ class Mainboard:
             #print("siin")
             self.ser.write(text.encode('utf-8'))
             time.sleep(0.02)
-            print("throwerSpeed" + str(self.throwerspeed))
+            #print("throwerSpeed" + str(self.throwerspeed))
 
             if self.throwerspeed != self.lastThrowerSpeed:
                 print("throwTime")
@@ -21,6 +21,7 @@ class Mainboard:
             self.lastThrowerSpeed = self.throwerspeed
             time.sleep(0.02)
             self.ser.write(("sv:" + str(self.throwerangle) + "\r \n").encode("utf-8"))
+            print("ThrowerAngle" + str(self.throwerangle))
 
     def __init__(self):
         self.throwerSpeedsList = sorted(utils.readThrowerFile("throwerFile.csv"))
@@ -106,14 +107,13 @@ class Mainboard:
         self.wheel1 = 0
         self.wheel2 = -10
         self.wheel3 = 10
-        self.ser.write(str.encode("sd:0:-10:10 \r \n"))
 
-    def rotateLeftAndRight(self, x, x1):
+    def rotateLeftAndRight(self, x, x1, wheel1Speed):
         if x1 is not None:
-            if x1 > 325: #325
-                self.wheel1 = 15
-            elif x1 < 329: #329
-                self.wheel1 = -15
+            #if x1 > 325: #325
+            self.wheel1 = wheel1Speed
+            #elif x1 < 329: #329
+            #self.wheel1 = wheel1Speed
         else:
             self.wheel1 = -30
 
@@ -190,7 +190,6 @@ class Mainboard:
 
             valueScaled = float(basketWidth - widthMin) / float(widthSpan)
             self.throwerangle = int(angleMin + (valueScaled * angleSpan))
-            #print("ThrowerAngle" + str(throwerAngleCalculation))
         except NameError:
             print("error")
 
@@ -208,8 +207,8 @@ class Mainboard:
                 #print("results " + str(speedMin) + " " + str(speedMax) + " " + str(distanceMin) + " " + str(distanceMax) + " " + str(distance))
                 #print("x: ", xZero, xOne)
         try:
-            print("distance " + str(distance))
-            print(speedMin,speedMax, distanceMin, distanceMax)
+            #print("distance " + str(distance))
+            #print(speedMin,speedMax, distanceMin, distanceMax)
             scale = scipy.interpolate.interp1d([distanceMin, distanceMax], [speedMin, speedMax])
             # widthSpan = speedMax - speedMin
             # angleSpan = distanceMax - distanceMin
@@ -220,7 +219,7 @@ class Mainboard:
             throwerSpeed = int(scale(distance))
 
             if throwerSpeed > 0:
-                print("throwerSpeed2 " + str(throwerSpeed))
+                #print("throwerSpeed2 " + str(throwerSpeed))
                 self.throwerspeed = throwerSpeed
         except NameError:
             print("error")
@@ -234,3 +233,9 @@ class Mainboard:
 
     def servoDown(self):
         self.throwerangle = 1300
+
+
+    def moveForwardPID(self, wheel1):
+        self.wheel1 = wheel1
+        self.wheel2 = 20
+        self.wheel3 = -20
