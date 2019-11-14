@@ -31,6 +31,11 @@ try:
 except KeyError:
     exit("Blue col)or has not been thresholded, run threshold.py")
 
+try:
+    black_line_color = config.get_color_range("black")
+except KeyError:
+    exit("Blue col)or has not been thresholded, run threshold.py")
+
 pid = PID(0.7, 0, 0.01, setpoint=302)
 
 
@@ -40,7 +45,7 @@ movement = Mainboard()
 
 while cap.isOpened():
 
-    movement.currentlyMove = True
+    #movement.currentlyMove = True
 
     # Check for messages from xBee
     if movement.currentlyMove:
@@ -51,9 +56,11 @@ while cap.isOpened():
 
         ball_mask = utils.apply_color_mask(frame, ball_color)
         basket_mask = utils.apply_color_mask(frame, basket_color)
+        #black_line_mask = utils.apply_color_mask(frame, black_line_color)
 
         biggest_ball = utils.find_biggest_circle(ball_mask)
         find_basket = utils.find_basket(basket_mask)
+        #find_black_line = utils.find_black_line(black_line_mask)
 
         lineThickness = 2
         #cv2.line(frame, (335, 0), (335, 480), (0, 255, 0), lineThickness)
@@ -63,16 +70,22 @@ while cap.isOpened():
         if biggest_ball is not None:
             (x, y), radius = biggest_ball
             cv2.circle(frame, (x, y), radius, utils.get_color_range_mean(ball_color), 5)
+
             #print(x, y)
 
-            if y < 390 and circling is True:
+            if y < 350 and circling is True:
                 movement.omniDirectional(x, y)
+            elif y < 390 and y > 350 and circling is True:
+                movement.slowOmniDirectional(x, y)
             elif y > 410 and circling is True:
                 movement.moveBack()
             else:
                 if find_basket is not None:
                     (x1, y1), (w, h), (cX, cY) = find_basket
                     cv2.rectangle(frame, (x1, y1), (x1 + w, y1 + h), (0, 255, 0), 2)
+                    if movement.calc_distance(w) < 50:
+                        movement.moveLeft()
+                        time.sleep(0.5)
 
                     frame = cv2.line(frame, (cX, 0), (cX, 700), (255, 0, 0), 5)
                     #print("width: " + str(w))
@@ -88,7 +101,7 @@ while cap.isOpened():
                         #print("thing")
                         #print("ok")
                         movement.stop()
-                        movement.mapping(260, 500, 1800, 2000, movement.calc_distance(w))
+                        movement.mapping(350, 450, 1950, 2100, movement.calc_distance(w))
                         movement.getThrowerSpeed(w)
                         #movement.thrower(190)
                         print("Distance", movement.calc_distance(w))

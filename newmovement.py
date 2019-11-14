@@ -6,9 +6,13 @@ class Mainboard:
         while True:
             time.sleep(0.03)
             vastus = self.ser.read(19)
+            #print("vastus: " + str(vastus))
+            #print(len(vastus))
             if len(vastus) > 17:
+                #print("vastus: " + str(vastus))
                 self.messenger(vastus)
-
+            else:
+                self.ser.flush()
             text = ("sd:" + str(self.wheel1) + ":" + str(self.wheel2) + ":" + str(self.wheel3) + "\r \n")
             #print("siin")
             self.ser.write(text.encode('utf-8'))
@@ -16,12 +20,18 @@ class Mainboard:
             #print("throwerSpeed" + str(self.throwerspeed))
 
             if self.throwerspeed != self.lastThrowerSpeed:
-                print("throwTime")
+                #print("throwTime")
                 self.ser.write(str.encode('d:' + str(self.throwerspeed) + '\r \n'))
             self.lastThrowerSpeed = self.throwerspeed
             time.sleep(0.02)
             self.ser.write(("sv:" + str(self.throwerangle) + "\r \n").encode("utf-8"))
-            print("ThrowerAngle" + str(self.throwerangle))
+            #print("ThrowerAngle" + str(self.throwerangle))
+            if self.currentlyMove == False:
+                self.wheel1 = 0
+                self.wheel2 = 0
+                self.wheel3 = 0
+                self.throwerspeed = 0
+
 
     def __init__(self):
         self.throwerSpeedsList = sorted(utils.readThrowerFile("throwerFile.csv"))
@@ -33,41 +43,43 @@ class Mainboard:
         self.throwerspeed = 0
         self.lastThrowerSpeed = 0
         self.throwerangle = 0
-        self.robotSpeed = 60
+        self.robotSpeed = 70
+        self.slowRobotSpeed = 20
         self.wheelAngle1 = 0
         self.wheelAngle2 = 240
         self.wheelAngle3 = 120
         self.distance = 0
         self.currentlyMove = False
         self.setFieldID = "A"
-        self.setSelfID = "A"
+        self.setSelfID = "B"
         self.message = ""
         print("overwrite")
         self.communicationThread = threading.Thread(target=self.communication, daemon=True)
         self.ser = serial.Serial("/dev/ttyACM0", timeout=0.01, baudrate = 9600)
         self.communicationThread.start()
 
-    def messenger(self, message):
+    def messenger(self, message_in):
         setFieldID = self.setFieldID
         setSelfID = self.setSelfID
-        #print(message)
-        if len(message) > 17:
-            message = str(message[5:17])
-            fieldID = str(message[3])
-            selfID = str(message[4])
-            #print(message)
+        #print("messengeris", message_in)
+        if len(message_in) > 17:
+            message_in = str(message_in[5:17])
+            fieldID = str(message_in[3])
+            selfID = str(message_in[4])
+            #print("stuff " + str(fieldID) + " " + str(selfID))
+            #print("\n")
             self.ser.flush()
             #print(message)
             if fieldID == setFieldID and (selfID == setSelfID or selfID == "X"):
-                if "START" in message:
+                if "START" in message_in:
                     self.ser.write(str.encode('rf:a' + fieldID + setSelfID + 'ACK----- \r \n'))
                     print("start")
                     self.currentlyMove = True
-                elif "STOP" in message:
+                elif "STOP" in message_in:
                     self.ser.write(str.encode('rf:a' + fieldID + setSelfID + 'ACK----- \r \n'))
                     print("Stop!")
                     self.currentlyMove = False
-                elif "PING" in message:
+                elif "PING" in message_in:
                     print("DOS")
                     self.ser.write(str.encode('rf:a' + fieldID + setSelfID + 'ACK----- \r \n'))
                     self.currentlyMove
@@ -77,6 +89,7 @@ class Mainboard:
                 self.currentlyMove
         else:
             self.currentlyMove
+
 
     def moveLeft(self):
         self.wheel1 = -10
@@ -105,8 +118,8 @@ class Mainboard:
 
     def moveBack(self):
         self.wheel1 = 0
-        self.wheel2 = -10
-        self.wheel3 = 10
+        self.wheel2 = -15
+        self.wheel3 = 15
 
     def rotateLeftAndRight(self, x, x1, wheel1Speed):
         if x1 is not None:
@@ -171,6 +184,26 @@ class Mainboard:
         self.wheel2 = wheelLinearVelocity2
         self.wheel3 = wheelLinearVelocity3
 
+    def slowOmniDirectional(self, x, y):
+
+        #robotDirectionAngle calcualted from x and y coords of ball
+        try:
+            robotDirectionAngle = int(math.degrees(math.atan((327 - x)/y)) + 90)
+        except ZeroDivisionError:
+            robotDirectionAngle = 0.1
+
+        #print(robotDirectionAngle)
+
+        wheelLinearVelocity1 = int(-self.slowRobotSpeed * math.cos(math.radians(robotDirectionAngle - self.wheelAngle1)))
+        wheelLinearVelocity2 = int(-self.slowRobotSpeed * math.cos(math.radians(robotDirectionAngle - self.wheelAngle2)))
+        wheelLinearVelocity3 = int(-self.slowRobotSpeed * math.cos(math.radians(robotDirectionAngle - self.wheelAngle3)))
+
+        #print(wheelLinearVelocity1, wheelLinearVelocity2, wheelLinearVelocity3)
+
+        self.wheel1 = wheelLinearVelocity1
+        self.wheel2 = wheelLinearVelocity2
+        self.wheel3 = wheelLinearVelocity3
+
 
     def thrower(self, speed):
         self.throwerspeed = speed
@@ -184,7 +217,7 @@ class Mainboard:
     def mapping(self, widthMin, widthMax, angleMin, angleMax, basketWidth):
         # Basically arduino map function
         try:
-            print("basketwidth"+str(basketWidth))
+            #print("basketwidth"+str(basketWidth))
             widthSpan = widthMax - widthMin
             angleSpan = angleMax - angleMin
 
@@ -217,6 +250,9 @@ class Mainboard:
             # print(widthSpan, angleSpan, valueScaled)
             # throwerSpeed = int(distanceMin + (valueScaled * angleSpan))
             throwerSpeed = int(scale(distance))
+
+            if distance < 60:
+                self.throwerspeed = 180
 
             if throwerSpeed > 0:
                 #print("throwerSpeed2 " + str(throwerSpeed))

@@ -33,6 +33,18 @@ def apply_color_mask(src, color_range):
     return less_noise
 
 
+def find_black_line(src):
+    contours_black_line, _ = cv2.findContours(src, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+
+    for contour in contours_black_line:
+        M = cv2.moments(contour)
+
+        cX = int(M["m10"] / M["m00"])
+        cY = int(M["m01"] / M["m00"])
+
+        (x, y, w, h) = cv2.boundingRect(contour)
+        return (int(x), int(y)), (int(w), int(h)), (int(cX), int(cY))
+
 def find_biggest_circle(src):
     contours, _hierarchy = cv2.findContours(src, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     circles = map(cv2.minEnclosingCircle, contours)
