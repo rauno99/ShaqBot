@@ -3,8 +3,10 @@ from functools import partial
 import realsenseloader
 import config
 import utils
+import numpy as np
 
 realsenseloader.load_realsense()
+#kernel = np.ones((5,5), np.uint8)
 
 color_name = input("Color name: ")
 print("Select color range and press s to save, q to quit")
@@ -36,6 +38,10 @@ while cap.isOpened():
     cv2.imshow("frame", frame)
 
     mask = utils.apply_color_mask(frame, color_range)
+   # mask = utils.apply_black_mask(frame, color_range)
+    #opening = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+    #dilation = cv2.dilate(mask, kernel, iterations=1)
+
     cv2.imshow("mask", mask)
 
     # Keyboard input

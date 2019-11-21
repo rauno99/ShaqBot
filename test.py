@@ -5,9 +5,13 @@ import time
 import numpy as np
 from newmovement import Mainboard
 import realsenseloader
+from math import sqrt
 from simple_pid import PID
 
 #NB realsesnse is loaded with "realsense-viewer" in terminal
+
+#TODO
+attackBasket = "pink"
 
 realsenseloader.load_realsense()
 
@@ -27,7 +31,7 @@ except KeyError:
     exit("Ball color has not been thresholded, run threshold.py")
 
 try:
-    basket_color = config.get_color_range("pink")
+    basket_color = config.get_color_range(attackBasket)
 except KeyError:
     exit("Blue col)or has not been thresholded, run threshold.py")
 
@@ -36,8 +40,14 @@ try:
 except KeyError:
     exit("Blue col)or has not been thresholded, run threshold.py")
 
-pid = PID(0.7, 0, 0.01, setpoint=302)
+pid = PID(0.8, 0, 0.00001, setpoint=330)
+pid.output_limits = (-30, 30)
+toBallSpeed = PID(0.3, 0, 0, setpoint=420)
+rotateForBasketSpeed = PID(0.3, 0, 0, setpoint=320)
+rotateForBallDuringOmni = PID(0.2, 0, 0, setpoint=320)
 
+lastStepTimer = int(round(time.time() * 1000))
+lastBallFoundTime = int(round(time.time() * 1000))
 
 cap = cv2.VideoCapture(2)
 
@@ -56,30 +66,79 @@ while cap.isOpened():
 
         ball_mask = utils.apply_color_mask(frame, ball_color)
         basket_mask = utils.apply_color_mask(frame, basket_color)
-        #black_line_mask = utils.apply_color_mask(frame, black_line_color)
+        black_line_mask = utils.apply_black_mask(frame, black_line_color)
 
         biggest_ball = utils.find_biggest_circle(ball_mask)
         find_basket = utils.find_basket(basket_mask)
-        #find_black_line = utils.find_black_line(black_line_mask)
+        find_black_line = utils.find_black_line(black_line_mask)
 
         lineThickness = 2
         #cv2.line(frame, (335, 0), (335, 480), (0, 255, 0), lineThickness)
-        cv2.line(frame, (327, 0), (327, 480), (0, 255, 0), lineThickness)
-
+        #cv2.line(frame, (327, 0), (327, 480), (0, 255, 0), lineThickness)
 
         if biggest_ball is not None:
+
+            lastBallFoundTime = int(round(time.time() * 1000))
+            try:
+                (x1, y1), (w, h), (cX, cY) = find_basket
+                if cX > 600:
+                    movement.isBasketLeft = False
+                elif cX < 40:
+                    movement.isBasketLeft = True
+            except:
+                pass
+
             (x, y), radius = biggest_ball
+            cv2.line(frame, (320, 480), (x, y), (0, 255, 0), lineThickness)
+            if find_black_line is not None:
+                (lineX, lineY), (lineW, lineH), rect_angle, rect = find_black_line
+                box = cv2.boxPoints(rect)
+                #print("box")
+                #print(box)
+                #print(box[0][0], box[0][1], box[3][0], box[3][1])
+                box = np.int0(box)
+                #print("LINES")
+                #print((lineX, lineY), (lineW, lineH), rect_angle, rect)
+                if lineW > lineH:
+                    #print("siin1")
+
+                    #cv2.line(frame, (box[0][0], box[0][1]), (box[3][0], box[3][1]), (0, 255, 255), 20)
+                    cv2.line(frame, (box[0][0], box[0][1]), (box[3][0], box[3][1]), (0, 255, 255), 20)
+                    squareLine = [[box[0][0], box[0][1]], [box[3][0], box[3][1]]]
+                else:
+                    #print("siin2")
+                    cv2.line(frame, (box[2][0], box[2][1]), (box[3][0], box[3][1]), (0, 255, 255), 20)
+                    squareLine = [[box[2][0], box[2][1]], [box[3][0], box[3][1]]]
+
+
+
+
+                cv2.drawContours(frame, [box], 0, (0, 0, 255), 2)
+                fromRobotToBallLine = [[320, 480], [x, y]]
+                intersection = utils.intersectionFinder(fromRobotToBallLine, squareLine)
+                #intersection = utils.line_intersection(fromRobotToBallLine, squareLine)
+                #print(fromRobotToBallLine, squareLine)
+                if intersection == True:
+                    movement.stop()
+                    movement.moveLeft()
+                    time.sleep(0.15)
+
+
+
+
             cv2.circle(frame, (x, y), radius, utils.get_color_range_mean(ball_color), 5)
-
             #print(x, y)
-
-            if y < 350 and circling is True:
-                movement.omniDirectional(x, y)
-            elif y < 390 and y > 350 and circling is True:
-                movement.slowOmniDirectional(x, y)
+            omniWheelSpeed = int(toBallSpeed(y))
+            omniWheel1Speed = int(rotateForBallDuringOmni(x))
+            if y < 390 and circling is True:
+                movement.omniDirectional(x, y, omniWheelSpeed, omniWheel1Speed)
+            #elif y < 390 and y > 330 and circling is True:
+           #     movement.slowOmniDirectional(x, y)
             elif y > 410 and circling is True:
                 movement.moveBack()
             else:
+                wheel2Speed = int(-rotateForBasketSpeed(x))
+                #print("rotateforBasketSpeed" + str(x))
                 if find_basket is not None:
                     (x1, y1), (w, h), (cX, cY) = find_basket
                     cv2.rectangle(frame, (x1, y1), (x1 + w, y1 + h), (0, 255, 0), 2)
@@ -91,22 +150,25 @@ while cap.isOpened():
                     #print("width: " + str(w))
                     #print("Distance " + str(movement.distance(w)))
                     #korviga ühele joonele
-                    firstMillis = int(round(time.time() * 1000))
                     #print("firstmillis")
                     #if cX < 331 and cX > 325 and circling is True: #331 325
-                    if cX > 300 and cX < 304 and circling is True:
 
+                    if cX >= 326 and cX <= 334 and circling is True:
+
+                        millis = int(round(time.time() * 1000))
+                        #print("millisThing " + str(millis - firstMillis))
                         #print("Vahemik oige")
                         #movement.stop()
                         #print("thing")
                         #print("ok")
                         movement.stop()
-                        movement.mapping(350, 450, 1950, 2100, movement.calc_distance(w))
-                        movement.getThrowerSpeed(w)
-                        #movement.thrower(190)
-                        print("Distance", movement.calc_distance(w))
-                        print(movement.throwerspeed)
-                        circling = False
+                        if millis - firstMillis > 200:
+                            #movement.mapping(350, 450, 1950, 2100, movement.calc_distance(w))
+                            movement.getThrowerSpeed(w)
+                            #movement.thrower(250)
+                            print("Distance", movement.calc_distance(w))
+                            #print("movement.throwerspeed " + str(movement.throwerspeed))
+                            circling = False
 
                         #movement.getThrowerSpeed(w)
 
@@ -123,6 +185,7 @@ while cap.isOpened():
 
                     elif circling == False:
                         while True:
+                            #print("got here")
                             movement.moveForward()
                         #v = int(pid(cX))
                         #print("V " + str(v))
@@ -148,22 +211,39 @@ while cap.isOpened():
                             break
 
                     else:
+                        firstMillis = int(round(time.time() * 1000))
                         #print(x1)
                         wheel1Speed = int(pid(cX))
-                        if wheel1Speed > 20:
-                            wheel1Speed = 20
-                        movement.rotateLeftAndRight(x, cX, -wheel1Speed)
+                        #print("wheelSpeed " + str(wheel1Speed))
+                        if wheel1Speed > 50:
+                            wheel1Speed = 50
+                        movement.rotateLeftAndRight(x, cX, -wheel1Speed, wheel2Speed)
+                        #print("Cx" + str(cX))
                         #print("vahemik vale")
-
                 else:
-                    #print("no basket")
-                    movement.rotateLeftAndRight(x, x1=None, wheel1Speed=None)
+                    #print("no basket"
+                    movement.rotateLeftAndRight(x, x1=None, wheel1Speed=None, wheel2Speed=wheel2Speed)
                     circling = True
                     movement.throwerStop()
                     movement.servoDown()
         else:
             #print("no ball")
-            movement.moveLeft()
+            stepTimer = int(round(time.time() * 1000))
+            timeNow = int(round(time.time() * 1000))
+            #print("TIMER " + str(stepTimer - lastStepTimer))
+            if stepTimer - lastStepTimer > 500 and stepTimer - lastStepTimer < 800:
+                #print("STOP")
+                movement.stop()
+            elif stepTimer - lastStepTimer > 800:
+                lastStepTimer = int(round(time.time() * 1000))
+                #print("TIMER RESET")
+            else:
+                if timeNow - lastBallFoundTime > 300:
+                    #print("TURN LEFT")
+                    movement.moveLeft()
+                else:
+                    movement.stop()
+            #movement.moveLeft()
 
         #opening = cv2.morphologyEx(frame, cv2.MORPH_OPEN, kernel)
         cv2.imshow("frame", frame)
