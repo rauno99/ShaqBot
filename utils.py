@@ -33,7 +33,7 @@ def apply_color_mask(src, color_range):
     
     return less_noise
 
-def apply_black_mask(src, color_range):
+def apply_black_or_white_mask(src, color_range):
     # Convert to HSV and apply color mask
     hsv = cv2.cvtColor(src, cv2.COLOR_BGR2RGB)
     mask = cv2.inRange(hsv, tuple(color_range[0]), tuple(color_range[1]))
@@ -44,6 +44,20 @@ def apply_black_mask(src, color_range):
 
     return less_noise
 
+def find_white_line(src):
+    contours_black_line, _ = cv2.findContours(src, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+
+    for contour in contours_black_line:
+        M = cv2.moments(contour)
+
+        cX = int(M["m10"] / M["m00"])
+        cY = int(M["m01"] / M["m00"])
+
+        (x, y), (w, h), angle = cv2.minAreaRect(contour)
+        rect = cv2.minAreaRect(contour)
+        #print(str(w*h))
+        if w*h > 10000:
+            return (int(x), int(y)), (int(w), int(h)), int(angle), rect
 
 def find_black_line(src):
     contours_black_line, _ = cv2.findContours(src, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
@@ -56,7 +70,8 @@ def find_black_line(src):
 
         (x, y), (w, h), angle = cv2.minAreaRect(contour)
         rect = cv2.minAreaRect(contour)
-        if w*h > 4000:
+        #print(str(w*h))
+        if w*h > 10000:
             return (int(x), int(y)), (int(w), int(h)), int(angle), rect
 
 def find_biggest_circle(src):
@@ -67,7 +82,7 @@ def find_biggest_circle(src):
     if len(circles):
         (x, y), radius = circles[-1]
         #print(radius)
-        if float(radius) > 1.3:
+        if float(radius) > 1.85:
             return (int(x), int(y)), int(radius)
 
 def find_basket(src):
@@ -118,7 +133,7 @@ def intersectionFinder(line1, line2):
     line2 = LineString([(line2[0][0], line2[0][1]), (line2[1][0], line2[1][1])])
 
     result = line1.intersection(line2)
-    print(result)
+    #print(result)
     if str(result) == "GEOMETRYCOLLECTION EMPTY":
         return False
     else:

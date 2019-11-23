@@ -23,6 +23,7 @@ throwerSpeeds = sorted(throwerSpeeds)
 count = 0
 kernel = np.ones((5,5), np.uint8)
 circling = True
+amIOutside = False
 #print(throwerSpeeds)
 
 try:
@@ -33,18 +34,19 @@ except KeyError:
 try:
     basket_color = config.get_color_range(attackBasket)
 except KeyError:
-    exit("Blue col)or has not been thresholded, run threshold.py")
+    exit("Blue color has not been thresholded, run threshold.py")
 
 try:
     black_line_color = config.get_color_range("black")
+    white_line_color = config.get_color_range("white")
 except KeyError:
     exit("Blue col)or has not been thresholded, run threshold.py")
 
 pid = PID(0.8, 0, 0.00001, setpoint=330)
 pid.output_limits = (-30, 30)
-toBallSpeed = PID(0.3, 0, 0, setpoint=420)
+toBallSpeed = PID(0.3, 0.00001, 0, setpoint=420)
 rotateForBasketSpeed = PID(0.3, 0, 0, setpoint=320)
-rotateForBallDuringOmni = PID(0.2, 0, 0, setpoint=320)
+rotateForBallDuringOmni = PID(0.35, 0, 0, setpoint=320)
 
 lastStepTimer = int(round(time.time() * 1000))
 lastBallFoundTime = int(round(time.time() * 1000))
@@ -53,24 +55,36 @@ cap = cv2.VideoCapture(2)
 
 movement = Mainboard()
 
+frame_times = []
+start_t = time.time()
+
 while cap.isOpened():
 
-    #movement.currentlyMove = True
+    end_t = time.time()
+    time_taken = end_t - start_t
+    start_t = end_t
+    frame_times.append(time_taken)
+    frame_times = frame_times[-20:]
+    fps = len(frame_times) / sum(frame_times)
+    #print(fps)
+
+    movement.currentlyMove = True
 
     # Check for messages from xBee
     if movement.currentlyMove:
 
         #width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)  # float
-
         _, frame = cap.read()
 
         ball_mask = utils.apply_color_mask(frame, ball_color)
         basket_mask = utils.apply_color_mask(frame, basket_color)
-        black_line_mask = utils.apply_black_mask(frame, black_line_color)
+        black_line_mask = utils.apply_black_or_white_mask(frame, black_line_color)
+        white_line_mask = utils.apply_black_or_white_mask(frame, white_line_color)
 
         biggest_ball = utils.find_biggest_circle(ball_mask)
         find_basket = utils.find_basket(basket_mask)
         find_black_line = utils.find_black_line(black_line_mask)
+        find_white_line = utils.find_white_line(white_line_mask)
 
         lineThickness = 2
         #cv2.line(frame, (335, 0), (335, 480), (0, 255, 0), lineThickness)
@@ -81,9 +95,9 @@ while cap.isOpened():
             lastBallFoundTime = int(round(time.time() * 1000))
             try:
                 (x1, y1), (w, h), (cX, cY) = find_basket
-                if cX > 600:
+                if cX > 330:
                     movement.isBasketLeft = False
-                elif cX < 40:
+                elif cX < 310:
                     movement.isBasketLeft = True
             except:
                 pass
@@ -91,40 +105,53 @@ while cap.isOpened():
             (x, y), radius = biggest_ball
             cv2.line(frame, (320, 480), (x, y), (0, 255, 0), lineThickness)
             if find_black_line is not None:
-                (lineX, lineY), (lineW, lineH), rect_angle, rect = find_black_line
-                box = cv2.boxPoints(rect)
-                #print("box")
-                #print(box)
-                #print(box[0][0], box[0][1], box[3][0], box[3][1])
-                box = np.int0(box)
-                #print("LINES")
-                #print((lineX, lineY), (lineW, lineH), rect_angle, rect)
-                if lineW > lineH:
-                    #print("siin1")
 
-                    #cv2.line(frame, (box[0][0], box[0][1]), (box[3][0], box[3][1]), (0, 255, 255), 20)
-                    cv2.line(frame, (box[0][0], box[0][1]), (box[3][0], box[3][1]), (0, 255, 255), 20)
-                    squareLine = [[box[0][0], box[0][1]], [box[3][0], box[3][1]]]
+
+                #blackLine
+                (lineXblack, lineYblack), (lineWblack, lineHblack), rect_angle_black, rect_black = find_black_line
+                boxBlack = cv2.boxPoints(rect_black)
+                boxBlack = np.int0(boxBlack)
+                if lineWblack > lineHblack:
+                    #cv2.line(frame, (boxBlack[0][0], boxBlack[0][1]), (boxBlack[3][0], boxBlack[3][1]), (0, 255, 255), 20)
+                    cv2.line(frame, (boxBlack[0][0], boxBlack[0][1]), (boxBlack[3][0], boxBlack[3][1]), (0, 255, 255), 20)
+                    squareLine = [[boxBlack[0][0], boxBlack[0][1]], [boxBlack[3][0], boxBlack[3][1]]]
                 else:
                     #print("siin2")
-                    cv2.line(frame, (box[2][0], box[2][1]), (box[3][0], box[3][1]), (0, 255, 255), 20)
-                    squareLine = [[box[2][0], box[2][1]], [box[3][0], box[3][1]]]
+                    cv2.line(frame, (boxBlack[2][0], boxBlack[2][1]), (boxBlack[3][0], boxBlack[3][1]), (0, 255, 255), 20)
+                    squareLine = [[boxBlack[2][0], boxBlack[2][1]], [boxBlack[3][0], boxBlack[3][1]]]
 
+                # whiteLine
+                if find_white_line is not None:
+                    (lineXwhite, lineYwhite), (lineWwhite, lineHwhite), rect_angle_white, rect_white = find_white_line
+                    boxWhite = cv2.boxPoints(rect_white)
+                    boxWhite = np.int0(boxWhite)
 
+                    def calculateDistance(x1, y1, x2, y2):
+                        dist = sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
+                        return dist
 
+                    distanceBetweenBlackandWhite = calculateDistance(lineXblack, lineYblack, lineXwhite, lineYwhite)
+                    distanceBetweenBlackandRobot = calculateDistance(lineXblack, lineYblack, 320, 480)
+                    distanceBetweenWhiteandRobot = calculateDistance(lineXwhite, lineYwhite, 320, 480)
 
-                cv2.drawContours(frame, [box], 0, (0, 0, 255), 2)
+                    cv2.drawContours(frame, [boxWhite], 0, (255, 0, 255), 2)
+
+                    if distanceBetweenBlackandRobot < distanceBetweenWhiteandRobot:
+                        amIOutside = True
+                    else:
+                        amIOutside = False
+
+                cv2.drawContours(frame, [boxBlack], 0, (0, 0, 255), 2)
+
                 fromRobotToBallLine = [[320, 480], [x, y]]
                 intersection = utils.intersectionFinder(fromRobotToBallLine, squareLine)
                 #intersection = utils.line_intersection(fromRobotToBallLine, squareLine)
                 #print(fromRobotToBallLine, squareLine)
-                if intersection == True:
+                print("Am I outside? " + str(amIOutside))
+                if intersection == True and amIOutside == False:
                     movement.stop()
                     movement.moveLeft()
                     time.sleep(0.15)
-
-
-
 
             cv2.circle(frame, (x, y), radius, utils.get_color_range_mean(ball_color), 5)
             #print(x, y)
@@ -165,8 +192,8 @@ while cap.isOpened():
                         if millis - firstMillis > 200:
                             #movement.mapping(350, 450, 1950, 2100, movement.calc_distance(w))
                             movement.getThrowerSpeed(w)
-                            #movement.thrower(250)
                             print("Distance", movement.calc_distance(w))
+                            #movement.thrower(200)
                             #print("movement.throwerspeed " + str(movement.throwerspeed))
                             circling = False
 

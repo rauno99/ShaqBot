@@ -186,12 +186,11 @@ class Mainboard:
         wheelLinearVelocity3 = int(-speed * math.cos(math.radians(robotDirectionAngle - self.wheelAngle3)))
 
         #print(wheelLinearVelocity1, wheelLinearVelocity2, wheelLinearVelocity3)
-
-        self.wheel1 = wheelLinearVelocity1/2
-        #self.wheel1 = omniWheel1Speed
+        #self.wheel1 = wheelLinearVelocity1 / 2
+        self.wheel1 = -omniWheel1Speed
         #self.wheel1 = 0
-        self.wheel2 = wheelLinearVelocity2
-        self.wheel3 = wheelLinearVelocity3
+        self.wheel2 = speed
+        self.wheel3 = -speed
 
     def slowOmniDirectional(self, x, y):
 
