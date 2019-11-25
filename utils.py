@@ -71,7 +71,7 @@ def find_black_line(src):
         (x, y), (w, h), angle = cv2.minAreaRect(contour)
         rect = cv2.minAreaRect(contour)
         #print(str(w*h))
-        if w*h > 10000:
+        if w*h > 8000:
             return (int(x), int(y)), (int(w), int(h)), int(angle), rect
 
 def find_biggest_circle(src):
@@ -81,7 +81,7 @@ def find_biggest_circle(src):
 
     if len(circles):
         (x, y), radius = circles[-1]
-        #print(radius)
+        print(radius)
         if float(radius) > 1.85:
             return (int(x), int(y)), int(radius)
 
@@ -96,6 +96,7 @@ def find_basket(src):
 
         (x, y, w, h) = cv2.boundingRect(contour)
         #print("Basket size: ", w*h)
+        #print("wh " + str(w*h))
         if  h >= 15 and (w*h >= 700):
             return (int(x), int(y)), (int(w), int(h)), (int(cX), int(cY))
 

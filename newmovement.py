@@ -38,7 +38,7 @@ class Mainboard:
         self.isBasketLeft = True
         self.throwerSpeedsList = sorted(utils.readThrowerFile("throwerFile.csv"))
         self.W = 16
-        self.F = (108 * 100) / self.W
+        self.F = (153 * 100) / self.W #108
         self.wheel1 = 0
         self.wheel2 = 0
         self.wheel3 = 0
@@ -159,7 +159,7 @@ class Mainboard:
     def directLeftRight(self, angle):
         #-90 is RIGHT, 90 is LEFT
 
-        robotDirectionAngle = int(math.degrees(math.atan((327)) + angle))
+        robotDirectionAngle = int(math.degrees(math.atan((654)) + angle)) #327
 
         wheelLinearVelocity1 = int(-self.robotSpeed * math.cos(math.radians(robotDirectionAngle - self.wheelAngle1)))
         wheelLinearVelocity2 = int(-self.robotSpeed * math.cos(math.radians(robotDirectionAngle - self.wheelAngle2)))
@@ -175,7 +175,7 @@ class Mainboard:
 
         #robotDirectionAngle calcualted from x and y coords of ball
         try:
-            robotDirectionAngle = int(math.degrees(math.atan((327 - x)/y)) + 90)
+            robotDirectionAngle = int(math.degrees(math.atan((654 - x)/y)) + 90) #327
         except ZeroDivisionError:
             robotDirectionAngle = 0.1
 
@@ -196,7 +196,7 @@ class Mainboard:
 
         #robotDirectionAngle calcualted from x and y coords of ball
         try:
-            robotDirectionAngle = int(math.degrees(math.atan((327 - x)/y)) + 90)
+            robotDirectionAngle = int(math.degrees(math.atan((654 - x)/y)) + 90) #327
         except ZeroDivisionError:
             robotDirectionAngle = 0.1
 

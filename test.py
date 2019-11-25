@@ -7,6 +7,7 @@ from newmovement import Mainboard
 import realsenseloader
 from math import sqrt
 from simple_pid import PID
+import cameraImage
 
 #NB realsesnse is loaded with "realsense-viewer" in terminal
 
@@ -42,16 +43,20 @@ try:
 except KeyError:
     exit("Blue col)or has not been thresholded, run threshold.py")
 
-pid = PID(0.8, 0, 0.00001, setpoint=330)
+pid = PID(0.5, 0, 0.0001, setpoint=660) #330
 pid.output_limits = (-30, 30)
-toBallSpeed = PID(0.3, 0.00001, 0, setpoint=420)
-rotateForBasketSpeed = PID(0.3, 0, 0, setpoint=320)
-rotateForBallDuringOmni = PID(0.35, 0, 0, setpoint=320)
+toBallSpeed = PID(0.14, 0, 0, setpoint=840) #420
+rotateForBasketSpeed = PID(0.1, 0, 0, setpoint=640) #320
+rotateForBallDuringOmni = PID(0.15, 0, 0, setpoint=640) #320
 
 lastStepTimer = int(round(time.time() * 1000))
 lastBallFoundTime = int(round(time.time() * 1000))
 
 cap = cv2.VideoCapture(2)
+#ap.set(cv2.CAP_PROP_FRAME_WIDTH, 840)
+# cap.set(cv2.CAP_PROP_FPS, 60)
+cap.set(3,1280)
+cap.set(4,720)
 
 movement = Mainboard()
 
@@ -73,7 +78,8 @@ while cap.isOpened():
     # Check for messages from xBee
     if movement.currentlyMove:
 
-        #width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)  # float
+        width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)  # float
+        #print(width)
         _, frame = cap.read()
 
         ball_mask = utils.apply_color_mask(frame, ball_color)
@@ -95,15 +101,15 @@ while cap.isOpened():
             lastBallFoundTime = int(round(time.time() * 1000))
             try:
                 (x1, y1), (w, h), (cX, cY) = find_basket
-                if cX > 330:
+                if cX > 660:
                     movement.isBasketLeft = False
-                elif cX < 310:
+                elif cX < 620:
                     movement.isBasketLeft = True
             except:
                 pass
 
             (x, y), radius = biggest_ball
-            cv2.line(frame, (320, 480), (x, y), (0, 255, 0), lineThickness)
+            cv2.line(frame, (640, 720), (x, y), (0, 255, 0), lineThickness) #640 360
             if find_black_line is not None:
 
 
@@ -131,8 +137,8 @@ while cap.isOpened():
                         return dist
 
                     distanceBetweenBlackandWhite = calculateDistance(lineXblack, lineYblack, lineXwhite, lineYwhite)
-                    distanceBetweenBlackandRobot = calculateDistance(lineXblack, lineYblack, 320, 480)
-                    distanceBetweenWhiteandRobot = calculateDistance(lineXwhite, lineYwhite, 320, 480)
+                    distanceBetweenBlackandRobot = calculateDistance(lineXblack, lineYblack, 640, 720) #320 480
+                    distanceBetweenWhiteandRobot = calculateDistance(lineXwhite, lineYwhite, 640, 720)
 
                     cv2.drawContours(frame, [boxWhite], 0, (255, 0, 255), 2)
 
@@ -143,11 +149,11 @@ while cap.isOpened():
 
                 cv2.drawContours(frame, [boxBlack], 0, (0, 0, 255), 2)
 
-                fromRobotToBallLine = [[320, 480], [x, y]]
+                fromRobotToBallLine = [[640, 720], [x, y]] #320 480
                 intersection = utils.intersectionFinder(fromRobotToBallLine, squareLine)
                 #intersection = utils.line_intersection(fromRobotToBallLine, squareLine)
                 #print(fromRobotToBallLine, squareLine)
-                print("Am I outside? " + str(amIOutside))
+                #print("Am I outside? " + str(amIOutside))
                 if intersection == True and amIOutside == False:
                     movement.stop()
                     movement.moveLeft()
@@ -157,17 +163,18 @@ while cap.isOpened():
             #print(x, y)
             omniWheelSpeed = int(toBallSpeed(y))
             omniWheel1Speed = int(rotateForBallDuringOmni(x))
-            if y < 390 and circling is True:
+            if y < 540 and circling is True: #390
                 movement.omniDirectional(x, y, omniWheelSpeed, omniWheel1Speed)
             #elif y < 390 and y > 330 and circling is True:
            #     movement.slowOmniDirectional(x, y)
-            elif y > 410 and circling is True:
+            elif y > 580 and circling is True: #410
                 movement.moveBack()
             else:
                 wheel2Speed = int(-rotateForBasketSpeed(x))
                 #print("rotateforBasketSpeed" + str(x))
                 if find_basket is not None:
                     (x1, y1), (w, h), (cX, cY) = find_basket
+
                     cv2.rectangle(frame, (x1, y1), (x1 + w, y1 + h), (0, 255, 0), 2)
                     if movement.calc_distance(w) < 50:
                         movement.moveLeft()
@@ -180,7 +187,7 @@ while cap.isOpened():
                     #print("firstmillis")
                     #if cX < 331 and cX > 325 and circling is True: #331 325
 
-                    if cX >= 326 and cX <= 334 and circling is True:
+                    if cX >= 652 and cX <= 668 and circling is True: #326 334
 
                         millis = int(round(time.time() * 1000))
                         #print("millisThing " + str(millis - firstMillis))
@@ -283,7 +290,7 @@ while cap.isOpened():
             center = 327
             while True:
                 _, frame = cap.read()
-                cv2.line(frame, (center, 0), (center, 480), (0, 255, 0), lineThickness)
+                cv2.line(frame, (center, 0), (center, 720), (0, 255, 0), lineThickness)
                 cv2.imshow("frame", frame)
 
                 if cv2.waitKey(1) & 0xFF == ord("w"):

@@ -24,21 +24,24 @@ def update_range(i, j, value):
     color_range[i][j] = value
 
 cv2.namedWindow("frame")
-cv2.createTrackbar("h_min", "frame", color_range[0][0], 179, partial(update_range, 0, 0))
-cv2.createTrackbar("s_min", "frame", color_range[0][1], 255, partial(update_range, 0, 1))
-cv2.createTrackbar("v_min", "frame", color_range[0][2], 255, partial(update_range, 0, 2))
-cv2.createTrackbar("h_max", "frame", color_range[1][0], 179, partial(update_range, 1, 0))
-cv2.createTrackbar("s_max", "frame", color_range[1][1], 255, partial(update_range, 1, 1))
-cv2.createTrackbar("v_max", "frame", color_range[1][2], 255, partial(update_range, 1, 2))
+cv2.namedWindow("mask")
+cv2.createTrackbar("h_min", "mask", color_range[0][0], 179, partial(update_range, 0, 0))
+cv2.createTrackbar("s_min", "mask", color_range[0][1], 255, partial(update_range, 0, 1))
+cv2.createTrackbar("v_min", "mask", color_range[0][2], 255, partial(update_range, 0, 2))
+cv2.createTrackbar("h_max", "mask", color_range[1][0], 179, partial(update_range, 1, 0))
+cv2.createTrackbar("s_max", "mask", color_range[1][1], 255, partial(update_range, 1, 1))
+cv2.createTrackbar("v_max", "mask", color_range[1][2], 255, partial(update_range, 1, 2))
 
 cap = cv2.VideoCapture(2)
+cap.set(3,1280)
+cap.set(4,720)
 
 while cap.isOpened():
     _, frame = cap.read()
     cv2.imshow("frame", frame)
 
-    #mask = utils.apply_color_mask(frame, color_range)
-    mask = utils.apply_black_or_white_mask(frame, color_range)
+    mask = utils.apply_color_mask(frame, color_range)
+    #mask = utils.apply_black_or_white_mask(frame, color_range)
 
 
     #opening = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
