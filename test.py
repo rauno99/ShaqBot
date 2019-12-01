@@ -7,19 +7,21 @@ from newmovement import Mainboard
 import realsenseloader
 from math import sqrt
 from simple_pid import PID
-import cameraImage
 
 #NB realsesnse is loaded with "realsense-viewer" in terminal
 
 #TODO
 attackBasket = "pink"
+black = "black"
+white = "white"
 
 realsenseloader.load_realsense()
 
 firstMillis = int(round(time.time()*1000))
+millis = int(round(time.time()*1000))
 newMillis = 0
 throwerStatus = False
-throwerSpeeds = utils.readThrowerFile("throwerFile.csv")
+throwerSpeeds = utils.readThrowerFile("throwercsv.csv")
 throwerSpeeds = sorted(throwerSpeeds)
 count = 0
 kernel = np.ones((5,5), np.uint8)
@@ -38,15 +40,15 @@ except KeyError:
     exit("Blue color has not been thresholded, run threshold.py")
 
 try:
-    black_line_color = config.get_color_range("black")
-    white_line_color = config.get_color_range("white")
+    black_line_color = config.get_color_range(black)
+    white_line_color = config.get_color_range(white)
 except KeyError:
     exit("Blue col)or has not been thresholded, run threshold.py")
 
-pid = PID(0.5, 0, 0.0001, setpoint=660) #330
+pid = PID(0.45, 0.00001, 0.000002, setpoint=660) #330
 pid.output_limits = (-30, 30)
-toBallSpeed = PID(0.14, 0, 0, setpoint=840) #420
-rotateForBasketSpeed = PID(0.1, 0, 0, setpoint=640) #320
+toBallSpeed = PID(0.2, 0.00001, 0.0001, setpoint=660) #420
+rotateForBasketSpeed = PID(0.15, 0, 0, setpoint=640) #320
 rotateForBallDuringOmni = PID(0.15, 0, 0, setpoint=640) #320
 
 lastStepTimer = int(round(time.time() * 1000))
@@ -62,8 +64,11 @@ movement = Mainboard()
 
 frame_times = []
 start_t = time.time()
+firstMoveForward = True
+lastThrowerMillis = (round(time.time() * 1000))
 
 while cap.isOpened():
+
 
     end_t = time.time()
     time_taken = end_t - start_t
@@ -75,17 +80,31 @@ while cap.isOpened():
 
     movement.currentlyMove = True
 
+    throwerMillis = (round(time.time() * 1000))
+    #print(throwerMillis - lastThrowerMillis)
+    if throwerMillis - lastThrowerMillis > 1500:
+        throwerStatus = False
+
     # Check for messages from xBee
     if movement.currentlyMove:
+
+        if firstMoveForward:
+            #movement.moveForward()
+            #time.sleep(1)
+            firstMoveForward = False
+
 
         width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)  # float
         #print(width)
         _, frame = cap.read()
 
         ball_mask = utils.apply_color_mask(frame, ball_color)
+        #Sinine
+        #basket_mask = utils.apply_black_or_white_mask(frame, basket_color)
+        #Pink
         basket_mask = utils.apply_color_mask(frame, basket_color)
         black_line_mask = utils.apply_black_or_white_mask(frame, black_line_color)
-        white_line_mask = utils.apply_black_or_white_mask(frame, white_line_color)
+        white_line_mask = utils.apply_color_mask(frame, white_line_color)
 
         biggest_ball = utils.find_biggest_circle(ball_mask)
         find_basket = utils.find_basket(basket_mask)
@@ -163,13 +182,14 @@ while cap.isOpened():
             #print(x, y)
             omniWheelSpeed = int(toBallSpeed(y))
             omniWheel1Speed = int(rotateForBallDuringOmni(x))
-            if y < 540 and circling is True: #390
+            if y < 640 and circling is True: #390
                 movement.omniDirectional(x, y, omniWheelSpeed, omniWheel1Speed)
             #elif y < 390 and y > 330 and circling is True:
            #     movement.slowOmniDirectional(x, y)
-            elif y > 580 and circling is True: #410
+            elif y > 680 and circling is True: #410
                 movement.moveBack()
             else:
+                #print(circling)
                 wheel2Speed = int(-rotateForBasketSpeed(x))
                 #print("rotateforBasketSpeed" + str(x))
                 if find_basket is not None:
@@ -178,7 +198,7 @@ while cap.isOpened():
                     cv2.rectangle(frame, (x1, y1), (x1 + w, y1 + h), (0, 255, 0), 2)
                     if movement.calc_distance(w) < 50:
                         movement.moveLeft()
-                        time.sleep(0.5)
+                        time.sleep(0.2)
 
                     frame = cv2.line(frame, (cX, 0), (cX, 700), (255, 0, 0), 5)
                     #print("width: " + str(w))
@@ -186,8 +206,10 @@ while cap.isOpened():
                     #korviga ühele joonele
                     #print("firstmillis")
                     #if cX < 331 and cX > 325 and circling is True: #331 325
-
-                    if cX >= 652 and cX <= 668 and circling is True: #326 334
+                    #print("cX", cX)
+                    #print(circling)
+                    #print(millis-firstMillis)
+                    if cX >= 652 and cX <= 668 and circling is True and millis - firstMillis > 200: #326 334; 652,668 667,683
 
                         millis = int(round(time.time() * 1000))
                         #print("millisThing " + str(millis - firstMillis))
@@ -196,13 +218,14 @@ while cap.isOpened():
                         #print("thing")
                         #print("ok")
                         movement.stop()
-                        if millis - firstMillis > 200:
-                            #movement.mapping(350, 450, 1950, 2100, movement.calc_distance(w))
-                            movement.getThrowerSpeed(w)
-                            print("Distance", movement.calc_distance(w))
-                            #movement.thrower(200)
-                            #print("movement.throwerspeed " + str(movement.throwerspeed))
-                            circling = False
+                        time.sleep(0.1)
+                        #movement.mapping(360, 460, 1950, 2100, movement.calc_distance(w))
+                        movement.getThrowerSpeed(w)
+                        print("Distance", movement.calc_distance(w))
+                        #movement.thrower(175)
+                        time.sleep(0.4)
+                        #print("movement.throwerspeed "f+ str(movement.throwerspeed))
+                        circling = False
 
                         #movement.getThrowerSpeed(w)
 
@@ -217,7 +240,7 @@ while cap.isOpened():
                         #movement.servoDown()
 
 
-                    elif circling == False:
+                    elif circling == False and throwerStatus == False:
                         while True:
                             #print("got here")
                             movement.moveForward()
@@ -234,18 +257,26 @@ while cap.isOpened():
 
                         #else:
                         #    movement.stop()
-                            time.sleep(1)
+                            time.sleep(0.5)
                             #if millis - firstMillis > 2000:
                             #print("here?")
                             circling = True
                             movement.throwerStop()
                             movement.servoDown()
                             movement.stop()
+                            throwerStatus = True
+                            lastThrowerMillis = int(round(time.time() * 1000))
                             _, frame = cap.read()
                             break
 
                     else:
-                        firstMillis = int(round(time.time() * 1000))
+                        circling = True
+                        movement.throwerStop()
+                        if cX >= 652 and cX <= 668:
+                            #print("y" + str(y))
+                            millis = int(round(time.time() * 1000))
+                        else:
+                            firstMillis = int(round(time.time() * 1000))
                         #print(x1)
                         wheel1Speed = int(pid(cX))
                         #print("wheelSpeed " + str(wheel1Speed))
@@ -255,7 +286,7 @@ while cap.isOpened():
                         #print("Cx" + str(cX))
                         #print("vahemik vale")
                 else:
-                    #print("no basket"
+                    #print("no basket")
                     movement.rotateLeftAndRight(x, x1=None, wheel1Speed=None, wheel2Speed=wheel2Speed)
                     circling = True
                     movement.throwerStop()
@@ -275,6 +306,7 @@ while cap.isOpened():
                 if timeNow - lastBallFoundTime > 300:
                     #print("TURN LEFT")
                     movement.moveLeft()
+                    throwerStatus = False
                 else:
                     movement.stop()
             #movement.moveLeft()

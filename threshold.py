@@ -40,8 +40,8 @@ while cap.isOpened():
     _, frame = cap.read()
     cv2.imshow("frame", frame)
 
-    mask = utils.apply_color_mask(frame, color_range)
-    #mask = utils.apply_black_or_white_mask(frame, color_range)
+    #mask = utils.apply_color_mask(frame, color_range)
+    mask = utils.apply_black_or_white_mask(frame, color_range)
 
 
     #opening = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)

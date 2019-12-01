@@ -63,7 +63,7 @@ def load_realsense():
         # Serialize all controls to a Json string
         #serialized_string = advnc_mode.serialize_json()
         #print("Controls as JSON: \n", serialized_string)
-        serialized_string = open("uus.json")
+        serialized_string = open("robotex.json")
         as_json_object = json.load(serialized_string)
 
         # We can also load controls from a json string

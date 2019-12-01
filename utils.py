@@ -8,7 +8,7 @@ def readThrowerFile(failname):
     andmed = []
     for rida in fail:
         jupp = rida.strip().split(",")
-        print(jupp)
+        #print(jupp)
         distance = int(jupp[0])
         speed = int(jupp[1])
         andmed.append((distance, speed))
@@ -81,7 +81,7 @@ def find_biggest_circle(src):
 
     if len(circles):
         (x, y), radius = circles[-1]
-        print(radius)
+        #print(radius)
         if float(radius) > 1.85:
             return (int(x), int(y)), int(radius)
 
@@ -97,7 +97,7 @@ def find_basket(src):
         (x, y, w, h) = cv2.boundingRect(contour)
         #print("Basket size: ", w*h)
         #print("wh " + str(w*h))
-        if  h >= 15 and (w*h >= 700):
+        if  h >= 15 and (w*h >= 1600):
             return (int(x), int(y)), (int(w), int(h)), (int(cX), int(cY))
 
 

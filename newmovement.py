@@ -22,6 +22,7 @@ class Mainboard:
 
             if self.throwerspeed != self.lastThrowerSpeed:
                 #print("throwTime")
+                #print("throwerspeed " + str(self.throwerspeed))
                 self.ser.write(str.encode('d:' + str(self.throwerspeed) + '\r \n'))
             self.lastThrowerSpeed = self.throwerspeed
             time.sleep(0.02)
@@ -36,7 +37,7 @@ class Mainboard:
 
     def __init__(self):
         self.isBasketLeft = True
-        self.throwerSpeedsList = sorted(utils.readThrowerFile("throwerFile.csv"))
+        self.throwerSpeedsList = sorted(utils.readThrowerFile("throwercsv.csv"))
         self.W = 16
         self.F = (153 * 100) / self.W #108
         self.wheel1 = 0
@@ -52,8 +53,8 @@ class Mainboard:
         self.wheelAngle3 = 120
         self.distance = 0
         self.currentlyMove = False
-        self.setFieldID = "B"
-        self.setSelfID = "B"
+        self.setFieldID = "A"
+        self.setSelfID = "A"
         self.message = ""
         print("overwrite")
         self.communicationThread = threading.Thread(target=self.communication, daemon=True)
@@ -105,8 +106,8 @@ class Mainboard:
 
     def moveForward(self):
         self.wheel1 = 0
-        self.wheel2 = 30
-        self.wheel3 = -30
+        self.wheel2 = 60
+        self.wheel3 = -60
 
     def moveSlowForward(self):
         self.wheel1 = 0
@@ -192,6 +193,9 @@ class Mainboard:
         self.wheel2 = speed
         self.wheel3 = -speed
 
+
+
+
     def slowOmniDirectional(self, x, y):
 
         #robotDirectionAngle calcualted from x and y coords of ball
@@ -245,11 +249,12 @@ class Mainboard:
             elif xZero > distance:
                 distanceMax = xZero
                 speedMax = xOne
-                print("results " + str(speedMin) + " " + str(speedMax) + " " + str(distanceMin) + " " + str(distanceMax) + " " + str(distance))
+                #print("results " + str(speedMin) + " " + str(speedMax) + " " + str(distanceMin) + " " + str(distanceMax) + " " + str(distance))
                 #print("x: ", xZero, xOne)
         try:
             #print("distance " + str(distance))
             #print(speedMin,speedMax, distanceMin, distanceMax)
+            print([distanceMin, distanceMax], [speedMin, speedMax])
             scale = scipy.interpolate.interp1d([distanceMin, distanceMax], [speedMin, speedMax])
             # widthSpan = speedMax - speedMin
             # angleSpan = distanceMax - distanceMin
